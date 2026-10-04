@@ -56,8 +56,18 @@ Where a tool has its own cleanup command, the app uses it (`xcrun simctl delete 
 `xcrun simctl runtime delete`). Every path passes `PathGuard` before deletion: it must be at least two levels
 inside your home folder and never one of the well-known folders.
 
-Project artifacts only count when the matching build file sits next to them: `build/` next to
-`build.gradle(.kts)` or `pubspec.yaml`, `node_modules/` next to `package.json`, `Pods/` next to `Podfile`, and so on.
+A project folder is only deleted when it passes two checks:
+
+1. **It's a known build folder** in the place its tool puts it: `build/` next to `build.gradle(.kts)` or
+   `pubspec.yaml`, `node_modules/` next to `package.json`, `Pods/` next to `Podfile`, `vendor/bundle/` with a
+   `Gemfile`, NuGet `packages/` next to a `.sln`, Flutter's `ios/Flutter/*.framework`, Elixir `_build/` and
+   `deps/`, `.venv/`, `dist/`, `.playwright-cli/` and so on (`ProjectArtifacts.rules`).
+2. **Git ignores it** (the folder, or every file in it) **and nothing inside is tracked** (`GitIgnoreCheck`).
+
+Git only ever removes folders from the list, never adds them, so gitignored app data (`data/`, `uploads/`,
+`captures/`, `.env`, worktrees) is never offered. Folders that fail the git check are kept and listed in the ⓘ
+popover with the reason. Projects outside git can't be confirmed, so they're Review instead of Safe.
+The ⓘ popover lists every folder that will be deleted.
 
 ## Smarter suggestions (optional)
 

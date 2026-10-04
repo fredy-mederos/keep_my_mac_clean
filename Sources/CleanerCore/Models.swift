@@ -107,6 +107,10 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
     public var dateKind: DateKind
     /// For project build folders: what the project is and how active it is.
     public var project: ProjectProfile?
+    /// Every folder in the action was confirmed ignored by git, with nothing tracked inside.
+    public var checkedWithGit: Bool
+    /// Folders that matched a rule but were left out, and why (for example "not ignored by git").
+    public var skipped: [SkippedFolder]
 
     public init(
         id: String,
@@ -123,7 +127,9 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
         blockers: [Blocker] = [],
         lastUsed: Date? = nil,
         dateKind: DateKind = .used,
-        project: ProjectProfile? = nil
+        project: ProjectProfile? = nil,
+        checkedWithGit: Bool = false,
+        skipped: [SkippedFolder] = []
     ) {
         self.id = id
         self.title = title
@@ -140,6 +146,8 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
         self.lastUsed = lastUsed
         self.dateKind = dateKind
         self.project = project
+        self.checkedWithGit = checkedWithGit
+        self.skipped = skipped
     }
 }
 

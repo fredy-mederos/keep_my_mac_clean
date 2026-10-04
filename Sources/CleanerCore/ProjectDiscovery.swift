@@ -8,9 +8,9 @@ public enum ProjectDiscovery {
     static let markerFiles: Set<String> = [
         "settings.gradle", "settings.gradle.kts", "build.gradle", "build.gradle.kts",
         "Package.swift", "Podfile", "package.json", "pubspec.yaml",
-        "Cargo.toml", "pom.xml", "go.mod",
+        "Cargo.toml", "pom.xml", "go.mod", "mix.exs", "Gemfile", "pyproject.toml",
     ]
-    static let markerExtensions: Set<String> = ["xcodeproj", "xcworkspace"]
+    static let markerExtensions: Set<String> = ["xcodeproj", "xcworkspace", "sln", "csproj"]
 
     /// Never descend into these while looking for projects.
     static let skippedFolders: Set<String> = [

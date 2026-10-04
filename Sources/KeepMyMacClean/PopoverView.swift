@@ -641,6 +641,8 @@ private struct ItemInfoView: View {
                 }
             }
 
+            ActionTargets(item: item)
+
             if let after = item.afterCleaning {
                 section("After cleaning", symbol: "arrow.triangle.2.circlepath") {
                     Text(after)
@@ -673,6 +675,125 @@ private struct ItemInfoView: View {
                 .textCase(.uppercase)
             content()
         }
+    }
+}
+
+/// Exactly what cleaning touches: the folders deleted, the files moved to the Trash, or the command run.
+private struct ActionTargets: View {
+    @Environment(AppModel.self) private var model
+    let item: CleanupItem
+    @State private var showsAll = false
+
+    /// Shown before "Show all".
+    private let previewCount = 5
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(title, systemImage: symbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+            switch item.action {
+            case .removePaths(let urls), .moveToTrash(let urls):
+                if item.checkedWithGit {
+                    Label(urls.count == 1 ? "Ignored by git, nothing tracked inside" : "All ignored by git, nothing tracked inside",
+                          systemImage: "checkmark.seal.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
+                paths(urls)
+                if !item.skipped.isEmpty {
+                    skippedList
+                }
+            case .command(let executable, let arguments):
+                Text(([URL(fileURLWithPath: executable).lastPathComponent] + arguments).joined(separator: " "))
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
+    private var title: String {
+        switch item.action {
+        case .removePaths(let urls): urls.count == 1 ? "Deletes this folder" : "Deletes these \(urls.count) folders"
+        case .moveToTrash: "Moves to the Trash"
+        case .command: "Runs"
+        }
+    }
+
+    private var symbol: String {
+        switch item.action {
+        case .removePaths: "trash"
+        case .moveToTrash: "arrow.up.trash"
+        case .command: "terminal"
+        }
+    }
+
+    @ViewBuilder
+    private func paths(_ urls: [URL]) -> some View {
+        let sorted = urls.sorted { display($0) < display($1) }
+        let visible = showsAll ? sorted : Array(sorted.prefix(previewCount))
+        let list = VStack(alignment: .leading, spacing: 2) {
+            ForEach(visible, id: \.self) { url in
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                } label: {
+                    Text(display(url))
+                        .font(.system(.caption, design: .monospaced))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Reveal \(PathFormat.abbreviated(url)) in Finder")
+            }
+        }
+        if showsAll, sorted.count > 12 {
+            // Explicit height: inside a self-sizing popover a ScrollView has no natural height.
+            ScrollView { list }.frame(height: 200)
+        } else {
+            list
+        }
+        if sorted.count > previewCount {
+            Button(showsAll ? "Show fewer" : "Show all \(sorted.count)") {
+                showsAll.toggle()
+            }
+            .buttonStyle(.link)
+            .font(.caption)
+        }
+    }
+
+    /// Folders a rule matched but git didn't confirm, so they're kept.
+    private var skippedList: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Label(item.skipped.count == 1 ? "Kept 1 folder" : "Kept \(item.skipped.count) folders", systemImage: "hand.raised")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.top, 6)
+            ForEach(item.skipped, id: \.self) { folder in
+                HStack(spacing: 6) {
+                    Text(display(folder.url))
+                        .font(.system(.caption, design: .monospaced))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text(folder.reason)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                }
+            }
+        }
+    }
+
+    /// Inside a project, paths are relative to it ("app/build"); otherwise "~/…".
+    private func display(_ url: URL) -> String {
+        if item.project != nil, let base = item.revealURL?.standardizedFileURL.path {
+            let path = url.standardizedFileURL.path
+            if path.hasPrefix(base + "/") { return String(path.dropFirst(base.count + 1)) + "/" }
+        }
+        return PathFormat.abbreviated(url)
     }
 }
 

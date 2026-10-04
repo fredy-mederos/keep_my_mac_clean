@@ -130,7 +130,8 @@ import Testing
         let context = ScanContext(home: home.url, projectLocations: [home.path("dev")], runsSystemCommands: false)
         let category = ScanEngine.scan(ProjectsScanner(), context: context)
         #expect(category.items.map(\.title) == ["one"])
-        #expect(category.items.first?.safety == .safe)
+        // Without git (no repository, or no system commands) a project can't be confirmed, so it's Review.
+        #expect(category.items.first?.safety == .review)
     }
 }
 
