@@ -5,6 +5,7 @@ import SwiftUI
 struct PopoverView: View {
     @Environment(AppModel.self) private var model
     @State private var listHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
 
     /// The list grows with its content up to this height, then scrolls.
     private let maxListHeight: CGFloat = 430
@@ -22,6 +23,11 @@ struct PopoverView: View {
             FooterBar()
         }
         .frame(width: 400)
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        .background(MenuWindowHeight(height: contentHeight))
+        // If the window is ever taller than the content, keep the content at the top.
+        .frame(maxHeight: .infinity, alignment: .top)
         .animation(.snappy(duration: 0.2), value: model.phase)
     }
 
@@ -165,7 +171,7 @@ private struct TrendLine: View {
             }
             .font(.caption)
         } else {
-            Label("Free space trend appears after a day", systemImage: "chart.line.flattrend.xyaxis")
+            Label("Trend shows up after a day", systemImage: "chart.line.flattrend.xyaxis")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
