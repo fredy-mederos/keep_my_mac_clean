@@ -6,6 +6,8 @@ public enum Safety: String, Sendable, Codable, Hashable {
     case safe
     /// Probably not needed, but you may want to keep some of it (old OS symbols, old IDE versions, downloaded deps).
     case review
+    /// Your own files (large videos, installers, downloads). Only ever moved to the Trash.
+    case personal
 }
 
 /// What cleaning an item actually does.
@@ -14,6 +16,27 @@ public enum CleanupAction: Sendable, Hashable {
     case removePaths([URL])
     /// Run a tool's own cleanup command (preferred when one exists, e.g. `xcrun simctl delete unavailable`).
     case command(executable: String, arguments: [String])
+    /// Move to the Trash so you can still change your mind. Used for your own files.
+    case moveToTrash([URL])
+
+    public var movesToTrash: Bool {
+        if case .moveToTrash = self { return true }
+        return false
+    }
+}
+
+/// What `CleanupItem.lastUsed` means for this item, for display ("used 2 days ago", "added 3 months ago").
+public enum DateKind: String, Sendable, Hashable {
+    case used, opened, added, modified
+
+    public var label: String {
+        switch self {
+        case .used: "used"
+        case .opened: "opened"
+        case .added: "added"
+        case .modified: "changed"
+        }
+    }
 }
 
 /// Something that should not be running while an item is cleaned (Xcode, Android Studio, the Gradle daemon...).
@@ -53,6 +76,7 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
     public var revealURL: URL?
     public var blockers: [Blocker]
     public var lastUsed: Date?
+    public var dateKind: DateKind
 
     public init(
         id: String,
@@ -64,7 +88,8 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
         note: String? = nil,
         revealURL: URL? = nil,
         blockers: [Blocker] = [],
-        lastUsed: Date? = nil
+        lastUsed: Date? = nil,
+        dateKind: DateKind = .used
     ) {
         self.id = id
         self.title = title
@@ -76,6 +101,7 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
         self.revealURL = revealURL
         self.blockers = blockers
         self.lastUsed = lastUsed
+        self.dateKind = dateKind
     }
 }
 

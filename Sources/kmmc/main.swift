@@ -60,13 +60,30 @@ case "scan":
         for item in category.items {
             totals[item.safety, default: 0] += item.size
             let size = ByteFormat.standard(item.size).padding(toLength: 10, withPad: " ", startingAt: 0)
-            let badge = item.safety == .review ? "[review] " : ""
+            let badge = switch item.safety {
+            case .safe: ""
+            case .review: "[review] "
+            case .personal: "[to trash] "
+            }
             print("   \(size) \(badge)\(item.title)\(item.detail.map { " — \($0)" } ?? "")")
         }
         print()
     }
     print("Safe: \(ByteFormat.standard(totals[.safe] ?? 0)) · Review: \(ByteFormat.standard(totals[.review] ?? 0))")
 
+case "history":
+    let history = HistoryStore().load()
+    print("\(history.samples.count) free-space samples, \(history.scans.count) scan records")
+    if let first = history.samples.first, let last = history.samples.last {
+        print("From \(first.date.formatted()) (\(ByteFormat.short(first.available)) free) to \(last.date.formatted()) (\(ByteFormat.short(last.available)) free)")
+    }
+    if let trend = history.trend() {
+        let days = trend.daysUntilFull.map { String(format: ", full in ~%.0f days", $0) } ?? ""
+        print("Trend: \(ByteFormat.short(Int64(trend.bytesPerDay))) per day\(days)")
+    } else {
+        print("Trend: not enough history yet (needs 12 hours)")
+    }
+
 default:
-    print("usage: kmmc [scan|disk|discover]")
+    print("usage: kmmc [scan|disk|discover|history]")
 }

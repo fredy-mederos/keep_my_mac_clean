@@ -43,9 +43,15 @@ public struct CleanupOutcome: Sendable {
 
 public struct Cleaner: Sendable {
     public var home: URL
+    /// How files are moved to the Trash. Replaced in tests so they never touch the real Trash.
+    public var trash: @Sendable (URL) throws -> Void
 
-    public init(home: URL = FileManager.default.homeDirectoryForCurrentUser) {
+    public init(
+        home: URL = FileManager.default.homeDirectoryForCurrentUser,
+        trash: @escaping @Sendable (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
+    ) {
         self.home = home
+        self.trash = trash
     }
 
     /// Cleans one item. Blocking: call it off the main thread.
@@ -65,6 +71,19 @@ public struct Cleaner: Sendable {
                 }
                 if !failures.isEmpty {
                     return CleanupOutcome(item: item, error: "Couldn't remove everything in \(failures.joined(separator: ", ")).")
+                }
+            case .moveToTrash(let urls):
+                for url in urls { try PathGuard.validate(url, home: home) }
+                var failures: [String] = []
+                for url in urls where FileInfo.exists(url) {
+                    do {
+                        try trash(url)
+                    } catch {
+                        failures.append(url.lastPathComponent)
+                    }
+                }
+                if !failures.isEmpty {
+                    return CleanupOutcome(item: item, error: "Couldn't move \(failures.joined(separator: ", ")) to the Trash.")
                 }
             case .command(let executable, let arguments):
                 let output = try CommandRunner.run(executable, arguments, timeout: 600)

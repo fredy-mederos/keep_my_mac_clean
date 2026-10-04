@@ -7,12 +7,21 @@ public struct ScanContext: Sendable {
     public var applicationFolders: [URL]
     /// Whether scanners may ask tools like `xcrun simctl` (off in tests that use a fake home).
     public var runsSystemCommands: Bool
+    /// Your own files at least this big are listed under Large files.
+    public var largeFileMinimumSize: Int64
 
-    public init(home: URL, projectLocations: [URL], applicationFolders: [URL]? = nil, runsSystemCommands: Bool = true) {
+    public init(
+        home: URL,
+        projectLocations: [URL],
+        applicationFolders: [URL]? = nil,
+        runsSystemCommands: Bool = true,
+        largeFileMinimumSize: Int64 = 500_000_000
+    ) {
         self.home = home
         self.projectLocations = projectLocations
         self.applicationFolders = applicationFolders ?? [URL(fileURLWithPath: "/Applications"), home.appendingPathComponent("Applications")]
         self.runsSystemCommands = runsSystemCommands
+        self.largeFileMinimumSize = largeFileMinimumSize
     }
 
     func path(_ relative: String) -> URL {
@@ -65,6 +74,7 @@ public enum ScanEngine {
         PackageCachesScanner(),
         IDEScanner(),
         DockerScanner(),
+        LargeFilesScanner(),
     ]
 
     /// Items smaller than this are noise in the list.
@@ -129,11 +139,14 @@ public enum ScanEngine {
     }
 
     static func category(for scanner: any CleanupScanner, items: [CleanupItem]) -> CleanupCategory {
-        CleanupCategory(
+        // Two probes can find the same thing; keep the first so IDs stay unique.
+        var seen = Set<String>()
+        let unique = items.filter { seen.insert($0.id).inserted }
+        return CleanupCategory(
             id: scanner.categoryID,
             title: scanner.title,
             symbol: scanner.symbol,
-            items: items.filter { $0.size >= minimumItemSize }.sorted { $0.size > $1.size }
+            items: unique.filter { $0.size >= minimumItemSize }.sorted { $0.size > $1.size }
         )
     }
 }
