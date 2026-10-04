@@ -83,6 +83,7 @@ struct SettingsView: View {
 
             Section("Alerts") {
                 Toggle("Notify me when free space is low", isOn: $model.settings.notifyOnLowSpace)
+                Toggle("Weekly summary of what changed", isOn: $model.settings.weeklySummary)
                 Stepper("Alert below \(model.settings.lowSpaceThresholdGB) GB", value: $model.settings.lowSpaceThresholdGB, in: 5...200, step: 5)
             }
 

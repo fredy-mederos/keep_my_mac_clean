@@ -12,14 +12,39 @@ public struct SpaceSample: Codable, Sendable, Equatable {
     }
 }
 
-/// Category sizes at the end of a full scan, to show what keeps growing.
+/// Category and item sizes at the end of a full scan, to show what keeps growing.
 public struct ScanRecord: Codable, Sendable, Equatable {
     public var date: Date
     public var categorySizes: [String: Int64]
+    /// Sizes of the bigger items (at least `ScanRecord.minimumItemSize`), by item ID.
+    public var itemSizes: [String: Int64]
 
-    public init(date: Date, categorySizes: [String: Int64]) {
+    /// Smaller items aren't stored, to keep the history file small.
+    public static let minimumItemSize: Int64 = 50_000_000
+
+    public init(date: Date, categorySizes: [String: Int64], itemSizes: [String: Int64] = [:]) {
         self.date = date
         self.categorySizes = categorySizes
+        self.itemSizes = itemSizes
+    }
+
+    public init(date: Date, categories: [CleanupCategory]) {
+        self.init(
+            date: date,
+            categorySizes: Dictionary(uniqueKeysWithValues: categories.map { ($0.id, $0.totalSize) }),
+            itemSizes: Dictionary(
+                categories.flatMap(\.items).filter { $0.size >= Self.minimumItemSize }.map { ($0.id, $0.size) },
+                uniquingKeysWith: max
+            )
+        )
+    }
+
+    public init(from decoder: Decoder) throws {
+        // Records written before item sizes existed have none.
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        date = try container.decode(Date.self, forKey: .date)
+        categorySizes = try container.decode([String: Int64].self, forKey: .categorySizes)
+        itemSizes = try container.decodeIfPresent([String: Int64].self, forKey: .itemSizes) ?? [:]
     }
 }
 
@@ -42,6 +67,7 @@ public struct SpaceHistory: Codable, Sendable, Equatable {
     public var samples: [SpaceSample] = []
     public var scans: [ScanRecord] = []
     public var lastFillingAlert: Date?
+    public var lastWeeklySummary: Date?
 
     public static let sampleInterval: TimeInterval = 30 * 60
     public static let retention: TimeInterval = 90 * 86_400

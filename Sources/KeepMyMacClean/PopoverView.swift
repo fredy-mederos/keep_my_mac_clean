@@ -16,6 +16,9 @@ struct PopoverView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
                 .padding(.bottom, 12)
+            DigestCard()
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
             FilterChips()
                 .padding(.horizontal, 12)
                 .padding(.bottom, 10)
@@ -224,6 +227,47 @@ private struct Sparkline: View {
         .chartYAxis(.hidden)
         .chartLegend(.hidden)
         .chartYScale(domain: .automatic(includesZero: false))
+    }
+}
+
+// MARK: - Weekly summary
+
+/// "Free space down 9 GB this week" with what grew, and a shortcut to the biggest grower.
+private struct DigestCard: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        if let facts = model.digestFacts, let text = model.digestText {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: facts.netChange < 0 ? "chart.bar.xaxis.ascending" : "chart.bar.xaxis")
+                        .foregroundStyle(Color.accentColor)
+                    Text(text.headline)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                }
+                if !text.body.isEmpty {
+                    Text(text.body)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let grower = facts.biggestGrower, let item = model.allItems.first(where: { $0.id == grower.id }) {
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) { model.focus(onItem: item.id) }
+                    } label: {
+                        Label("Select \(item.title) · \(ByteFormat.short(item.size))", systemImage: "scope")
+                    }
+                    .buttonStyle(.link)
+                    .font(.caption)
+                    .padding(.top, 2)
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card(cornerRadius: 10, fill: Color.accentColor.opacity(0.07))
+        }
     }
 }
 

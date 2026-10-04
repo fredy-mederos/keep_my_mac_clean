@@ -30,6 +30,9 @@ final class AppModel {
     var phase: CleanPhase = .idle
     private(set) var runningBlockers: [Blocker] = []
     let suggestions = SmartSuggestions()
+    /// The weekly summary, computed from the history.
+    private(set) var digestFacts: DigestFacts?
+    private(set) var digestText: (headline: String, body: String)?
 
     var settings: AppSettings {
         didSet {
@@ -98,6 +101,7 @@ final class AppModel {
         disk = latest
         if history.record(SpaceSample(date: Date(), available: latest.available, total: latest.total)) {
             saveHistory()
+            refreshDigest()
         }
         checkLowSpace(latest)
         checkFillingFast()
@@ -187,12 +191,41 @@ final class AppModel {
 
         selection.formIntersection(Set(allItems.map(\.id)))
         lastScan = Date()
-        history.record(scan: ScanRecord(
-            date: Date(),
-            categorySizes: Dictionary(uniqueKeysWithValues: categories.map { ($0.id, $0.totalSize) })
-        ))
+        history.record(scan: ScanRecord(date: Date(), categories: categories))
         saveHistory()
         refreshDisk()
+        refreshDigest()
+    }
+
+    // MARK: Weekly summary
+
+    /// Recomputes the summary from the history. The text is written by the app, not a model: in testing the
+    /// on-device model's version was accurate but left out the most useful details (what grew, the pace).
+    func refreshDigest() {
+        guard !categories.isEmpty, let facts = Digest.facts(history: history, categories: categories) else {
+            digestFacts = nil
+            digestText = nil
+            return
+        }
+        digestFacts = facts
+        digestText = Digest.plainSummary(facts)
+        sendWeeklySummaryIfDue(facts)
+    }
+
+    private func sendWeeklySummaryIfDue(_ facts: DigestFacts) {
+        guard settings.weeklySummary, facts.isFullWeek, let text = digestText else { return }
+        if let last = history.lastWeeklySummary, Date().timeIntervalSince(last) < 6.5 * 86_400 { return }
+        Notifier.post(title: text.headline, body: text.body.isEmpty ? "Open KeepMyMacClean to see what changed." : text.body)
+        history.lastWeeklySummary = Date()
+        saveHistory()
+    }
+
+    /// Shows an item from the summary: clears the filter, expands its category and selects it.
+    func focus(onItem id: String) {
+        guard let category = categories.first(where: { $0.items.contains { $0.id == id } }) else { return }
+        filter = nil
+        expanded.insert(category.id)
+        selection.insert(id)
     }
 
     /// Growth of a category over about a week, when it's big enough to mention.

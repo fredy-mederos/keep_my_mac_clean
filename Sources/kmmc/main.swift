@@ -92,6 +92,56 @@ case "history":
         print("Trend: not enough history yet (needs 12 hours)")
     }
 
+case "digest":
+    // The weekly summary as the app computes it. --sample uses a made-up week, for when history is short.
+    let history: SpaceHistory
+    var categories: [CleanupCategory] = []
+    if arguments.contains("--sample") {
+        (history, categories) = sampleWeek()
+    } else {
+        history = HistoryStore().load()
+        let context = ScanContext(home: home, projectLocations: locations(), largeFileMinimumSize: SettingsStore().load().largeFileThresholdBytes)
+        for await snapshot in ScanEngine.run(context: context) { categories = snapshot.categories }
+    }
+    let now = arguments.contains("--sample") ? history.samples.last?.date ?? Date() : Date()
+    guard let facts = Digest.facts(history: history, categories: categories, now: now) else {
+        let hours = history.samples.first.map { Int(Date().timeIntervalSince($0.date) / 3600) } ?? 0
+        print("Not enough history yet: \(hours) hours of samples, the summary needs 2 days.")
+        break
+    }
+    let summary = Digest.plainSummary(facts)
+    print("\(summary.headline)\n\(summary.body)")
+    if let grower = facts.biggestGrower {
+        print("Shortcut: Select \(grower.title) (+\(ByteFormat.short(grower.bytes)))")
+    }
+
 default:
-    print("usage: kmmc [scan|disk|discover|history]")
+    print("usage: kmmc [scan|disk|discover|history|digest [--sample]]")
+}
+
+/// A made-up week: losing ~1.3 GB a day, one 20 GB cleanup, Xcode build data and downloads growing.
+func sampleWeek() -> (SpaceHistory, [CleanupCategory]) {
+    let gb: Int64 = 1_000_000_000
+    let start = Date().addingTimeInterval(-7 * 86_400)
+    var history = SpaceHistory()
+    var available = 41.0
+    for hour in stride(from: 0.0, through: 168.0, by: 6.0) {
+        if hour == 72 { available += 20 }
+        history.record(SpaceSample(date: start.addingTimeInterval(hour * 3600), available: Int64(available * 1e9), total: 494 * gb))
+        available -= 1.3 / 4
+    }
+    history.record(scan: ScanRecord(
+        date: start,
+        categorySizes: ["xcode": 40_300_000_000, "files": 1 * gb],
+        itemSizes: ["dd": 10 * gb, "rest": 30_300_000_000]
+    ))
+    func item(_ id: String, _ title: String, _ size: Int64) -> CleanupItem {
+        CleanupItem(id: id, title: title, size: size, safety: .safe, action: .removePaths([]))
+    }
+    return (history, [
+        CleanupCategory(id: "xcode", title: "Xcode and simulators", symbol: "", items: [
+            item("dd", "Auto1 build data", 15_800_000_000), item("rest", "Other", 30_300_000_000),
+        ]),
+        CleanupCategory(id: "files", title: "Large files and downloads", symbol: "", items: [item("apk", "app.apk", 2_200_000_000)]),
+    ])
 }

@@ -16,6 +16,7 @@ swift test                         # unit tests (use a fake home folder, never t
 swift run kmmc scan                # read-only: print what the app would find
 swift run kmmc discover            # read-only: show where your projects were found
 swift run kmmc history             # read-only: free-space samples and the current trend
+swift run kmmc digest [--sample]   # read-only: the weekly summary (needs 2 days of history; --sample fakes a week)
 ```
 
 `build-app.sh` stamps each build: the version in `Resources/Info.plist` (bumped by hand for milestones), the
@@ -50,19 +51,20 @@ rows show the cost inline, colored by level:
 Facts come from your projects where cheap: which Gradle version each project's wrapper uses, which API levels
 they compile against, which Podfiles still use the git CocoaPods specs, how many simulators use a runtime.
 
+Where a tool has its own cleanup command, the app uses it (`xcrun simctl delete unavailable`,
+`xcrun simctl runtime delete`). Every path passes `PathGuard` before deletion: it must be at least two levels
+inside your home folder and never one of the well-known folders.
+
+Project artifacts only count when the matching build file sits next to them: `build/` next to
+`build.gradle(.kts)` or `pubspec.yaml`, `node_modules/` next to `package.json`, `Pods/` next to `Podfile`, and so on.
+
 ## Smarter suggestions (optional)
 
 With Settings → Suggestions → "Smarter suggestions (on-device AI)" on (macOS 26+ with Apple Intelligence),
 Apple's on-device Foundation Models write a one-line suggestion for each of your own files from its name, type,
 folder, size and dates. Suggestions are generated when a row appears, cached in
 `~/Library/Application Support/KeepMyMacClean/suggestions.json`, and fall back to the fixed text. The model
-only writes text; it never changes what an item is or what cleaning does. Nothing leaves your Mac. Where a tool
-has its own cleanup command, the app uses it (`xcrun simctl delete unavailable`, `xcrun simctl runtime delete`).
-Every path passes `PathGuard` before deletion: it must be at least two levels inside your home folder and
-never one of the well-known folders.
-
-Project artifacts only count when the matching build file sits next to them: `build/` next to
-`build.gradle(.kts)` or `pubspec.yaml`, `node_modules/` next to `package.json`, `Pods/` next to `Podfile`, and so on.
+only writes text; it never changes what an item is or what cleaning does. Nothing leaves your Mac.
 
 ## Free space history
 
@@ -71,6 +73,14 @@ The app samples free space every 30 minutes while it runs and keeps 90 days in
 uses the last 7 days and ignores jumps up from cleanups, so cleaning doesn't hide how fast the disk fills.
 A full scan runs every 6 hours; categories that grew more than 500 MB in about a week show it.
 A notification fires when free space drops below your threshold, or when the current pace fills the disk within a week.
+
+Once there are 2 days of history, the popover shows a summary card ("Free space down 9 GB this week. Xcode and
+simulators grew 6.1 GB, mostly Auto1 build data…") with a shortcut that selects the item that grew the most. With
+a full week of history it's also sent as a weekly notification (Settings → Alerts). `swift run kmmc digest`
+prints it; `--sample` shows a made-up week.
+
+The summary is written by the app, not a language model: in testing, Apple's on-device model reworded it
+accurately but kept dropping the most useful details (which item grew, the pace, what you cleaned).
 
 ## Layout
 
@@ -87,4 +97,6 @@ A notification fires when free space drops below your threshold, or when the cur
 2. ✅ One-click selection of inactive projects and DerivedData, older Android SDK platforms/sources/build tools, Docker (`docker system df` + prune)
 3. ✅ Large files and downloads with suggestions (Trash only), free-space history, trend and "days until full", category growth, redesigned popover
 4. ✅ Cost of cleaning on every item (reason, cost level, ⓘ details, data-loss warning), optional on-device AI suggestions, build version in Settings
-5. Treemap explorer, Full Disk Access view of hidden space (Trash, Photos, device backups)
+5. ✅ Weekly summary of what changed, with a shortcut to the biggest grower
+6. Project one-liners (on-device model summarizing READMEs), explaining unknown big folders (curated list + optional cloud model)
+7. Treemap explorer, Full Disk Access view of hidden space (Trash, Photos, device backups)
