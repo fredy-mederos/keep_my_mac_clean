@@ -26,6 +26,7 @@ struct PopoverView: View {
             FooterBar()
         }
         .frame(width: 400)
+        .background(Palette.popoverBackground)
         .fixedSize(horizontal: false, vertical: true)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
         .background(MenuWindowHeight(height: contentHeight))
@@ -73,15 +74,15 @@ private struct HeaderView: View {
                     Text(model.menuBarText)
                         .font(.system(size: 26, weight: .semibold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(model.isLowOnSpace ? Color.red : Color.primary)
+                        .foregroundStyle(model.isLowOnSpace ? Palette.red : Color.primary)
                         .contentTransition(.numericText())
                     Text("free")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.secondaryText)
                 }
                 Text(statusLine)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
                 TrendLine()
                     .padding(.top, 2)
             }
@@ -145,7 +146,7 @@ private struct UsageRing: View {
                     .monospacedDigit()
                 Text("used")
                     .font(.system(size: 8.5, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
             }
         }
         .animation(.easeOut(duration: 0.4), value: fraction)
@@ -163,9 +164,9 @@ private struct TrendLine: View {
             let tint = tint(trend)
             HStack(spacing: 6) {
                 Image(systemName: symbol(trend))
-                    .foregroundStyle(tint ?? .secondary)
+                    .foregroundStyle(tint ?? Palette.secondaryText)
                 Text(text(trend))
-                    .foregroundStyle(tint ?? .secondary)
+                    .foregroundStyle(tint ?? Palette.secondaryText)
                     .lineLimit(1)
                 if model.recentSamples.count >= 2 {
                     Sparkline(samples: model.recentSamples, tint: tint ?? .accentColor)
@@ -176,7 +177,7 @@ private struct TrendLine: View {
         } else {
             Label("Trend shows up after a day", systemImage: "chart.line.flattrend.xyaxis")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Palette.secondaryText)
         }
     }
 
@@ -203,8 +204,8 @@ private struct TrendLine: View {
     /// Warning color when the disk fills up within a month, otherwise none.
     private func tint(_ trend: SpaceTrend) -> Color? {
         guard let days = trend.daysUntilFull else { return nil }
-        if days < 7 { return .red }
-        if days < 30 { return .orange }
+        if days < 7 { return Palette.red }
+        if days < 30 { return Palette.orange }
         return nil
     }
 }
@@ -250,7 +251,7 @@ private struct DigestCard: View {
                 if !text.body.isEmpty {
                     Text(text.body)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let grower = facts.biggestGrower, let item = model.allItems.first(where: { $0.id == grower.id }) {
@@ -295,7 +296,7 @@ private struct FilterChips: View {
                     Circle().fill(safety.tint).frame(width: 6, height: 6)
                     Text(title)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.secondaryText)
                     Spacer(minLength: 0)
                     if isActive {
                         Image(systemName: "line.3.horizontal.decrease")
@@ -311,7 +312,7 @@ private struct FilterChips: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .card(cornerRadius: 10, fill: isActive ? safety.tint.opacity(0.16) : Color.primary.opacity(0.045))
+            .card(cornerRadius: 10, fill: isActive ? safety.tint.opacity(0.18) : Palette.card)
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(isActive ? safety.tint.opacity(0.5) : .clear, lineWidth: 1)
@@ -345,12 +346,12 @@ private struct CategoryCard: View {
                         if let growth = model.growth(ofCategory: category.id) {
                             Label("+\(ByteFormat.short(growth.bytes)) since \(growth.since.formatted(.dateTime.weekday(.abbreviated)))", systemImage: "arrow.up.right")
                                 .labelStyle(.titleAndIcon)
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(Palette.orange)
                                 .help("Grew by \(ByteFormat.standard(growth.bytes)) since \(growth.since.formatted(date: .abbreviated, time: .omitted))")
                         }
                     }
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
                 }
                 Spacer(minLength: 6)
                 Text(ByteFormat.standard(category.totalSize))
@@ -381,7 +382,7 @@ private struct CategoryCard: View {
                 .padding(.vertical, 4)
             }
         }
-        .card(fill: Color.primary.opacity(isHovering && !isExpanded ? 0.07 : 0.045))
+        .card(fill: isHovering && !isExpanded ? Palette.cardHover : Palette.card)
         .onHover { isHovering = $0 }
     }
 }
@@ -405,11 +406,11 @@ private struct InactiveRow: View {
                     Text("\(inactive.count) not used in \(months)+ month\(months == 1 ? "" : "s")")
                         .foregroundStyle(.primary)
                     Text(ByteFormat.standard(size))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.secondaryText)
                     Spacer()
                     Text("Select")
                         .fontWeight(.medium)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Palette.blue)
                 }
                 .font(.caption)
                 .padding(.horizontal, 8)
@@ -437,21 +438,14 @@ private struct ItemRow: View {
         HStack(alignment: .center, spacing: 10) {
             CheckBox(state: isSelected ? .on : .off) { model.toggle(item) }
             VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 5) {
-                    Text(item.title)
-                        .font(.system(size: 12.5))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    switch item.safety {
-                    case .review: Tag(text: "Review", tint: .orange)
-                    case .personal: Tag(text: "To Trash", tint: .blue)
-                    case .safe: EmptyView()
-                    }
-                }
+                Text(item.title)
+                    .font(.system(size: 12.5))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -460,10 +454,17 @@ private struct ItemRow: View {
                 projectLine
             }
             Spacer(minLength: 8)
-            Text(ByteFormat.standard(item.size))
-                .font(.system(size: 11.5, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(ByteFormat.standard(item.size))
+                    .font(.system(size: 11.5, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.secondaryText)
+                switch item.safety {
+                case .review: Tag(text: "Review", color: Palette.orange)
+                case .personal: Tag(text: "To Trash", color: Palette.blue)
+                case .safe: EmptyView()
+                }
+            }
             infoButton
         }
         .padding(.horizontal, 8)
@@ -495,7 +496,7 @@ private struct ItemRow: View {
                 Image(systemName: level.symbol)
             }
             .font(.caption)
-            .foregroundStyle(level.tint)
+            .foregroundStyle(level.textColor)
             .lineLimit(1)
             .truncationMode(.tail)
             .labelStyle(CompactLabelStyle())
@@ -512,7 +513,7 @@ private struct ItemRow: View {
                 Image(systemName: suggestion.isGenerated ? "sparkles" : "lightbulb")
             }
             .font(.caption)
-            .foregroundStyle(suggestion.isGenerated ? Color.purple : Color.secondary)
+            .foregroundStyle(suggestion.isGenerated ? Palette.purple : Palette.secondaryText)
             .lineLimit(1)
             .truncationMode(.tail)
             .labelStyle(CompactLabelStyle())
@@ -529,7 +530,7 @@ private struct ItemRow: View {
                 Image(systemName: blurb.isGenerated ? "sparkles" : "text.alignleft")
             }
             .font(.caption)
-            .foregroundStyle(blurb.isGenerated ? Color.purple : Color.secondary)
+            .foregroundStyle(blurb.isGenerated ? Palette.purple : Palette.secondaryText)
             .lineLimit(1)
             .truncationMode(.tail)
             .labelStyle(CompactLabelStyle())
@@ -544,7 +545,7 @@ private struct ItemRow: View {
             } label: {
                 Image(systemName: "info.circle")
                     .font(.system(size: 12))
-                    .foregroundStyle(isHovering || showsInfo ? Color.secondary : Color.secondary.opacity(0.45))
+                    .foregroundStyle(isHovering || showsInfo ? Palette.secondaryText : Palette.secondaryText.opacity(0.6))
                     .frame(width: 16, height: 16)
                     .contentShape(Rectangle())
             }
@@ -595,7 +596,7 @@ private struct ItemInfoView: View {
                 Text(ByteFormat.standard(item.size))
                     .font(.system(.callout, design: .rounded).weight(.medium))
                     .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
             }
 
             if let project = item.project {
@@ -606,16 +607,16 @@ private struct ItemInfoView: View {
                     }
                     Text([project.stack, project.activity()].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.secondaryText)
                     if let subject = project.lastCommitSubject, project.description != nil || blurb?.isGenerated == true {
                         Text("Latest commit: \(subject)")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Palette.secondaryText)
                     }
                     if blurb?.isGenerated == true {
                         Label("Summarized on this Mac by Apple Intelligence", systemImage: "sparkles")
                             .font(.caption2)
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(Palette.purple)
                     }
                 }
             }
@@ -626,7 +627,7 @@ private struct ItemInfoView: View {
                     if suggestion?.isGenerated == true {
                         Label("Written on this Mac by Apple Intelligence", systemImage: "sparkles")
                             .font(.caption2)
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(Palette.purple)
                     }
                 }
             }
@@ -634,10 +635,10 @@ private struct ItemInfoView: View {
             if let cost = item.cost {
                 section("What it costs", symbol: item.costLevel?.symbol ?? "checkmark.circle") {
                     if let level = item.costLevel {
-                        Tag(text: level.label, tint: level.tint == .secondary ? .gray : level.tint)
+                        Tag(text: level.label, color: level.textColor)
                     }
                     Text(cost)
-                        .foregroundStyle(item.costLevel == .dataLoss ? Color.red : Color.primary)
+                        .foregroundStyle(item.costLevel == .dataLoss ? Palette.red : Color.primary)
                 }
             }
 
@@ -652,7 +653,7 @@ private struct ItemInfoView: View {
             if !item.blockers.isEmpty {
                 Label("Quit \(item.blockers.map(\.name).joined(separator: " and ")) before cleaning for best results.", systemImage: "exclamationmark.circle")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
             }
 
             if item.revealURL != nil {
@@ -671,7 +672,7 @@ private struct ItemInfoView: View {
         VStack(alignment: .leading, spacing: 4) {
             Label(title, systemImage: symbol)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Palette.secondaryText)
                 .textCase(.uppercase)
             content()
         }
@@ -691,7 +692,7 @@ private struct ActionTargets: View {
         VStack(alignment: .leading, spacing: 4) {
             Label(title, systemImage: symbol)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Palette.secondaryText)
                 .textCase(.uppercase)
             switch item.action {
             case .removePaths(let urls), .moveToTrash(let urls):
@@ -699,7 +700,7 @@ private struct ActionTargets: View {
                     Label(urls.count == 1 ? "Ignored by git, nothing tracked inside" : "All ignored by git, nothing tracked inside",
                           systemImage: "checkmark.seal.fill")
                         .font(.caption)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Palette.green)
                 }
                 paths(urls)
                 if !item.skipped.isEmpty {
@@ -769,7 +770,7 @@ private struct ActionTargets: View {
         VStack(alignment: .leading, spacing: 2) {
             Label(item.skipped.count == 1 ? "Kept 1 folder" : "Kept \(item.skipped.count) folders", systemImage: "hand.raised")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Palette.secondaryText)
                 .padding(.top, 6)
             ForEach(item.skipped, id: \.self) { folder in
                 HStack(spacing: 6) {
@@ -779,7 +780,7 @@ private struct ActionTargets: View {
                         .truncationMode(.middle)
                     Text(folder.reason)
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Palette.orange)
                         .lineLimit(1)
                         .layoutPriority(1)
                 }
@@ -806,14 +807,14 @@ private struct EmptyState: View {
                 ProgressView().controlSize(.small)
                 Text(model.scanStatus ?? "Scanning…")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
             } else {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 26))
                     .foregroundStyle(.green.gradient)
                 Text(model.filter == nil ? "Nothing to clean right now" : "Nothing of this kind to clean")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
                 if model.filter != nil {
                     Button("Show everything") { model.filter = nil }
                         .buttonStyle(.link)
@@ -845,7 +846,7 @@ private struct FooterBar: View {
                         ProgressView().controlSize(.mini)
                         Text("Checking that everything is gone…")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Palette.secondaryText)
                         Spacer()
                     }
                 case .finished(let freed, let trashed, _, let errors):
@@ -856,7 +857,7 @@ private struct FooterBar: View {
             .padding(.vertical, 12)
             .transition(.opacity)
         }
-        .background(.thinMaterial)
+        .background(Color.primary.opacity(0.035))
     }
 
     @ViewBuilder
@@ -865,7 +866,7 @@ private struct FooterBar: View {
             if model.selection.isEmpty {
                 Text("Select what to clean")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
                 Spacer()
                 Button("Select all safe") { model.selectAllSafe() }
                     .secondaryActionStyle()
@@ -874,7 +875,7 @@ private struct FooterBar: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("\(model.selection.count) selected")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.secondaryText)
                     Text(ByteFormat.standard(model.selectedSize))
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .monospacedDigit()
@@ -883,7 +884,7 @@ private struct FooterBar: View {
                 Spacer()
                 Button("Clear") { model.selection.removeAll() }
                     .buttonStyle(.borderless)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
                 Button {
                     model.requestClean()
                 } label: {
@@ -916,13 +917,13 @@ private struct FooterBar: View {
                     if !toDelete.isEmpty {
                         Text("Deleted permanently, not moved to the Trash. Build tools recreate them when needed.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Palette.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if !toTrash.isEmpty {
                         Text("Your files go to the Trash. Empty it afterwards to get the space back.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Palette.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if !dataLoss.isEmpty {
@@ -932,7 +933,7 @@ private struct FooterBar: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Palette.red)
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .card(cornerRadius: 8, fill: Color.red.opacity(0.1))
@@ -940,12 +941,12 @@ private struct FooterBar: View {
                     if reviewCount > 0 {
                         Label("\(reviewCount) marked Review", systemImage: "eye")
                             .font(.caption)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Palette.orange)
                     }
                     if !model.runningBlockers.isEmpty {
                         Label("Quit \(model.runningBlockers.map(\.name).joined(separator: ", ")) first for best results", systemImage: "exclamationmark.triangle")
                             .font(.caption)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Palette.orange)
                     }
                 }
             }
@@ -989,12 +990,12 @@ private struct FooterBar: View {
                 ProgressView().controlSize(.mini)
                 Text("Cleaning \(current)…")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
                     .lineLimit(1)
                 Spacer()
                 Text("\(done + 1) of \(total)")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Palette.secondaryText)
                     .monospacedDigit()
             }
             ProgressView(value: Double(done), total: Double(max(total, 1)))
@@ -1018,7 +1019,7 @@ private struct FooterBar: View {
                          ? "\(ByteFormat.standard(trashed)) moved to the Trash. Empty it to get that space back."
                          : "Moved \(ByteFormat.standard(trashed)) to the Trash. Empty it to get the space back.")
                         .font(freed > 0 ? .caption : .system(size: 13, weight: .semibold))
-                        .foregroundStyle(freed > 0 ? .secondary : .primary)
+                        .foregroundStyle(freed > 0 ? Palette.secondaryText : Color.primary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if freed == 0, trashed == 0 {
@@ -1028,7 +1029,7 @@ private struct FooterBar: View {
                 ForEach(errors.prefix(3), id: \.self) { error in
                     Text(error)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Palette.red)
                         .lineLimit(2)
                 }
             }

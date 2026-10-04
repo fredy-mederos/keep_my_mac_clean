@@ -30,6 +30,8 @@ echo "Built $APP (build $BUILD_NUMBER, $COMMIT)"
 
 if [[ "${1:-}" == "--install" ]]; then
   pkill -x KeepMyMacClean 2>/dev/null || true
+  # Wait for it to quit (up to 5 s): reopening too soon fails with error -600.
+  for _ in $(seq 25); do pgrep -x KeepMyMacClean >/dev/null || break; sleep 0.2; done
   rm -rf "$HOME/Applications/KeepMyMacClean.app"
   mkdir -p "$HOME/Applications"
   cp -R "$APP" "$HOME/Applications/"

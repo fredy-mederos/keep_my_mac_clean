@@ -12,11 +12,11 @@ struct SettingsView: View {
         Form {
             Section {
                 if model.settings.projectLocations.isEmpty {
-                    Text("No project folders yet.").foregroundStyle(.secondary)
+                    Text("No project folders yet.").foregroundStyle(Palette.secondaryText)
                 }
                 ForEach(model.settings.projectLocations, id: \.self) { path in
                     HStack {
-                        Image(systemName: "folder").foregroundStyle(.secondary)
+                        Image(systemName: "folder").foregroundStyle(Palette.secondaryText)
                         Text(PathFormat.abbreviated(URL(fileURLWithPath: path)))
                         Spacer()
                         Button {
@@ -45,7 +45,7 @@ struct SettingsView: View {
             } footer: {
                 Text("Build folders of the projects in these places show up under Project build folders. They were found automatically on first launch.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
             }
 
             Section("Cleaning") {
@@ -71,14 +71,14 @@ struct SettingsView: View {
                 if case .unavailable(let reason) = availability {
                     Text(reason)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.secondaryText)
                 }
             } header: {
                 Text("Suggestions")
             } footer: {
                 Text("Apple Intelligence, on this Mac, writes a one-line suggestion for each of your large files and downloads, and sums up projects whose README is long or not in English. It only changes text; what cleaning does stays the same.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.secondaryText)
             }
 
             Section("Alerts") {
@@ -100,7 +100,7 @@ struct SettingsView: View {
                         }
                     }
                 if let loginError {
-                    Text(loginError).font(.caption).foregroundStyle(.red)
+                    Text(loginError).font(.caption).foregroundStyle(Palette.red)
                 }
             }
 
