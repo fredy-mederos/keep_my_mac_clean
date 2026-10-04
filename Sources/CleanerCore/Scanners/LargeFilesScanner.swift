@@ -88,7 +88,7 @@ public struct LargeFilesScanner: CleanupScanner {
     static let skippedHomeFolders: Set<String> = ["Library", "Applications", "Pictures", "Music"]
     static let skippedPackageExtensions: Set<String> = [
         "app", "photoslibrary", "musiclibrary", "tvlibrary", "xcarchive", "xcodeproj", "xcworkspace",
-        "bundle", "framework", "logicx", "fcpbundle", "imovielibrary",
+        "bundle", "framework", "xcframework", "dSYM", "logicx", "fcpbundle", "imovielibrary",
     ]
 
     /// Files of at least `minimumSize` under `roots`. Hidden folders, skipped names and bundles aren't entered.
@@ -114,7 +114,10 @@ public struct LargeFilesScanner: CleanupScanner {
                 guard entry.pointee.fts_level > 0 else { continue }
                 let name = url.lastPathComponent
                 if name.hasPrefix(".") || skippedFolderNames.contains(name)
-                    || skippedPackageExtensions.contains(url.pathExtension.lowercased()) {
+                    || skippedPackageExtensions.contains(url.pathExtension)
+                    || skippedPackageExtensions.contains(url.pathExtension.lowercased())
+                    // SDKs like Flutter's: their big files belong to the toolchain, not to you.
+                    || (entry.pointee.fts_level <= 3 && ProjectDiscovery.isToolchain(url)) {
                     fts_set(fts, entry, FTS_SKIP)
                 }
             case FTS_F:
@@ -134,6 +137,7 @@ public struct LargeFilesScanner: CleanupScanner {
         let roots = FileInfo.subdirectories(of: context.home).filter {
             let name = $0.lastPathComponent
             return !name.hasPrefix(".") && !Self.skippedFolderNames.contains(name) && !Self.skippedHomeFolders.contains(name)
+                && !ProjectDiscovery.isToolchain($0)
         }
         let downloads = context.path("Downloads").standardizedFileURL.path
         return Self.findLargeFiles(in: roots, minimumSize: context.largeFileMinimumSize, skipFilesDirectlyIn: [downloads])

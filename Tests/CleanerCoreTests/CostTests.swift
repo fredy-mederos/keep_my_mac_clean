@@ -121,6 +121,19 @@ import Testing
         #expect(paths.allSatisfy { !$0.hasSuffix("~/Pictures") && !$0.hasSuffix("~/Music") })
     }
 
+    @Test func largeFileSearchSkipsToolchainsAndSymbolBundles() throws {
+        let home = try TestHome()
+        try home.file("flutter/bin/flutter")
+        try home.file("flutter/bin/cache/artifacts/engine/FlutterMacOS", bytes: 3_000_000)
+        try home.file("tools/sdks/flutter/bin/flutter")
+        try home.file("tools/sdks/flutter/bin/cache/big.bin", bytes: 3_000_000)
+        try home.file("Documents/App.framework.dSYM/Contents/Resources/DWARF/App", bytes: 3_000_000)
+        try home.file("Documents/Engine.xcframework/macos/Engine", bytes: 3_000_000)
+        try home.file("Documents/keep-me.mov", bytes: 3_000_000)
+        let context = ScanContext(home: home.url, projectLocations: [], runsSystemCommands: false, largeFileMinimumSize: 2_000_000)
+        #expect(LargeFilesScanner().largeFiles(context).map(\.title) == ["keep-me.mov"])
+    }
+
     @Test func costLevelsAreOrdered() {
         #expect(CostLevel.rebuild < .redownload)
         #expect(CostLevel.loseOption < .dataLoss)

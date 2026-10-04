@@ -35,7 +35,11 @@ case "discover":
 
 case "scan":
     printDisk()
-    let context = ScanContext(home: home, projectLocations: locations())
+    let context = ScanContext(
+        home: home,
+        projectLocations: locations(),
+        largeFileMinimumSize: SettingsStore().load().largeFileThresholdBytes
+    )
     print("Project locations: \(context.projectLocations.map { PathFormat.abbreviated($0) }.joined(separator: ", "))\n")
     let start = Date()
     var firstSeen: [String: TimeInterval] = [:]
