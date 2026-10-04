@@ -64,6 +64,23 @@ struct SettingsView: View {
                 }
             }
 
+            Section {
+                let availability = SmartSuggestions.availability
+                Toggle("Smarter suggestions (on-device AI)", isOn: $model.settings.smartSuggestions)
+                    .disabled(availability != .available)
+                if case .unavailable(let reason) = availability {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Suggestions")
+            } footer: {
+                Text("Apple Intelligence writes a one-line suggestion for each of your large files and downloads, on this Mac. It only changes the text; what cleaning does stays the same.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Alerts") {
                 Toggle("Notify me when free space is low", isOn: $model.settings.notifyOnLowSpace)
                 Stepper("Alert below \(model.settings.lowSpaceThresholdGB) GB", value: $model.settings.lowSpaceThresholdGB, in: 5...200, step: 5)
@@ -85,9 +102,20 @@ struct SettingsView: View {
                     Text(loginError).font(.caption).foregroundStyle(.red)
                 }
             }
+
+            Section("About") {
+                LabeledContent("KeepMyMacClean") {
+                    Text(AppVersion.summary)
+                        .textSelection(.enabled)
+                }
+                if let date = AppVersion.buildDate {
+                    LabeledContent("Built", value: date.formatted(date: .abbreviated, time: .shortened))
+                }
+                Link("Source on GitHub", destination: URL(string: "https://github.com/fredy-mederos/keep_my_mac_clean")!)
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: 480)
+        .frame(width: 480, height: 620)
     }
 
     private func addFolder() {
