@@ -13,6 +13,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/KeepMyMacClean" "$APP/Contents/MacOS/KeepMyMacClean"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"   # regenerate with: swift scripts/make-icon.swift
 
 # Stamp the build: build number = commit count, plus the commit and build date (shown in Settings → About).
 PLIST="$APP/Contents/Info.plist"

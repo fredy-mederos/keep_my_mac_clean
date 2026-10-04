@@ -20,6 +20,9 @@ swift run kmmc digest [--sample]   # read-only: the weekly summary (needs 2 days
 swift run kmmc projects            # read-only: stack, description and git activity of each project
 ```
 
+The app icon is drawn in code: `swift scripts/make-icon.swift` writes `Resources/AppIcon.icns` (and a 1024 px
+PNG preview), which `build-app.sh` copies into the bundle.
+
 `build-app.sh` stamps each build: the version in `Resources/Info.plist` (bumped by hand for milestones), the
 build number (commit count), the short commit hash (`-dirty` when built with uncommitted changes) and the build
 date. Settings → About shows them.
