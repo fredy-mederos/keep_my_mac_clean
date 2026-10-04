@@ -92,6 +92,15 @@ case "history":
         print("Trend: not enough history yet (needs 12 hours)")
     }
 
+case "projects":
+    // What the app knows about each project before any model is involved.
+    for project in ProjectDiscovery.projects(inLocations: locations()) {
+        let profile = ProjectProfiler.profile(of: project)
+        print("\(profile.name)  [\(profile.stack ?? "unknown stack")]  \(profile.activity() ?? "no git history")")
+        print("   \(profile.wantsModelSummary ? "[model] " : "")\(profile.plainBlurb ?? "—")")
+        if arguments.contains("--prompts") { print("<<<\n\(profile.prompt)\n>>>") }
+    }
+
 case "digest":
     // The weekly summary as the app computes it. --sample uses a made-up week, for when history is short.
     let history: SpaceHistory
@@ -116,7 +125,7 @@ case "digest":
     }
 
 default:
-    print("usage: kmmc [scan|disk|discover|history|digest [--sample]]")
+    print("usage: kmmc [scan|disk|discover|history|projects|digest [--sample]]")
 }
 
 /// A made-up week: losing ~1.3 GB a day, one 20 GB cleanup, Xcode build data and downloads growing.

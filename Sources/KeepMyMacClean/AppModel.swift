@@ -352,6 +352,15 @@ final class AppModel {
         return item.reason.map { ($0, false) }
     }
 
+    /// What a project is: the on-device model's one-liner when enabled and ready, otherwise the plain line.
+    func projectBlurb(for item: CleanupItem) -> (text: String, isGenerated: Bool)? {
+        guard let project = item.project else { return nil }
+        if settings.smartSuggestions, project.wantsModelSummary, let generated = suggestions.text(for: item) {
+            return (generated, true)
+        }
+        return project.plainBlurb.map { ($0, false) }
+    }
+
     func requestSuggestion(for item: CleanupItem) {
         guard settings.smartSuggestions else { return }
         suggestions.request(item)

@@ -457,6 +457,7 @@ private struct ItemRow: View {
                 }
                 costLine
                 suggestionLine
+                projectLine
             }
             Spacer(minLength: 8)
             Text(ByteFormat.standard(item.size))
@@ -512,6 +513,23 @@ private struct ItemRow: View {
             }
             .font(.caption)
             .foregroundStyle(suggestion.isGenerated ? Color.purple : Color.secondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .labelStyle(CompactLabelStyle())
+        }
+    }
+
+    /// On project rows: what the project is.
+    @ViewBuilder
+    private var projectLine: some View {
+        if let blurb = model.projectBlurb(for: item) {
+            Label {
+                Text(blurb.text)
+            } icon: {
+                Image(systemName: blurb.isGenerated ? "sparkles" : "text.alignleft")
+            }
+            .font(.caption)
+            .foregroundStyle(blurb.isGenerated ? Color.purple : Color.secondary)
             .lineLimit(1)
             .truncationMode(.tail)
             .labelStyle(CompactLabelStyle())
@@ -578,6 +596,28 @@ private struct ItemInfoView: View {
                     .font(.system(.callout, design: .rounded).weight(.medium))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
+            }
+
+            if let project = item.project {
+                let blurb = model.projectBlurb(for: item)
+                section("About this project", symbol: "folder") {
+                    if let blurb {
+                        Text(blurb.text)
+                    }
+                    Text([project.stack, project.activity()].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if let subject = project.lastCommitSubject, project.description != nil || blurb?.isGenerated == true {
+                        Text("Latest commit: \(subject)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    if blurb?.isGenerated == true {
+                        Label("Summarized on this Mac by Apple Intelligence", systemImage: "sparkles")
+                            .font(.caption2)
+                            .foregroundStyle(.purple)
+                    }
+                }
             }
 
             if let text = suggestion?.text ?? item.reason {

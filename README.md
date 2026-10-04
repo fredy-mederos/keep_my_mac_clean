@@ -17,6 +17,7 @@ swift run kmmc scan                # read-only: print what the app would find
 swift run kmmc discover            # read-only: show where your projects were found
 swift run kmmc history             # read-only: free-space samples and the current trend
 swift run kmmc digest [--sample]   # read-only: the weekly summary (needs 2 days of history; --sample fakes a week)
+swift run kmmc projects            # read-only: stack, description and git activity of each project
 ```
 
 `build-app.sh` stamps each build: the version in `Resources/Info.plist` (bumped by hand for milestones), the
@@ -66,6 +67,13 @@ folder, size and dates. Suggestions are generated when a row appears, cached in
 `~/Library/Application Support/KeepMyMacClean/suggestions.json`, and fall back to the fixed text. The model
 only writes text; it never changes what an item is or what cleaning does. Nothing leaves your Mac.
 
+Project rows show what each project is. The app reads the stack (Next.js, Flutter, Android…), the project's own
+description (package.json, pubspec.yaml or the README's first paragraph, skipping template text and bare links)
+and git activity. With Smarter suggestions on, the model condenses descriptions that are long or not in English
+("React escape room prototype inspired by Rusty Lake games"); it never sees dates, so it can't misjudge activity.
+Without a description the line is built from the stack and latest commit, because in testing the model only
+guessed from the folder name. `swift run kmmc projects` lists what the app knows about each project.
+
 ## Free space history
 
 The app samples free space every 30 minutes while it runs and keeps 90 days in
@@ -98,5 +106,6 @@ accurately but kept dropping the most useful details (which item grew, the pace,
 3. ✅ Large files and downloads with suggestions (Trash only), free-space history, trend and "days until full", category growth, redesigned popover
 4. ✅ Cost of cleaning on every item (reason, cost level, ⓘ details, data-loss warning), optional on-device AI suggestions, build version in Settings
 5. ✅ Weekly summary of what changed, with a shortcut to the biggest grower
-6. Project one-liners (on-device model summarizing READMEs), explaining unknown big folders (curated list + optional cloud model)
-7. Treemap explorer, Full Disk Access view of hidden space (Trash, Photos, device backups)
+6. ✅ Project one-liners: stack, description and git activity, condensed on-device when long or not in English
+7. Explaining unknown big folders (curated list + optional cloud model)
+8. Treemap explorer, Full Disk Access view of hidden space (Trash, Photos, device backups)

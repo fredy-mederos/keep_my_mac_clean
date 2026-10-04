@@ -36,7 +36,8 @@ public struct ProjectsScanner: CleanupScanner {
                     costLevel: downloads.isEmpty ? .rebuild : .redownload,
                     afterCleaning: "Build tools recreate these the next time you build or install dependencies.",
                     revealURL: project,
-                    lastUsed: ProjectArtifacts.lastActivity(of: project)
+                    lastUsed: ProjectArtifacts.lastActivity(of: project),
+                    project: ProjectProfiler.profile(of: project, runsGit: context.runsSystemCommands)
                 )
             }
         }

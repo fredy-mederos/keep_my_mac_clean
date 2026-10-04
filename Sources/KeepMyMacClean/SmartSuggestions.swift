@@ -52,9 +52,11 @@ final class SmartSuggestions {
         texts[Self.key(for: item)]
     }
 
-    /// Queues a suggestion for an item of yours, unless it's cached or already queued.
+    /// Queues a suggestion for one of your files, or a one-liner for a project with a long or
+    /// non-English description, unless it's cached or already queued.
     func request(_ item: CleanupItem) {
-        guard item.safety == .personal, Self.availability == .available else { return }
+        let wanted = item.safety == .personal || item.project?.wantsModelSummary == true
+        guard wanted, Self.availability == .available else { return }
         let key = Self.key(for: item)
         guard texts[key] == nil, !inFlight.contains(key) else { return }
         inFlight.insert(key)
@@ -79,7 +81,21 @@ final class SmartSuggestions {
     }
 
     static func key(for item: CleanupItem) -> String {
-        "\(item.id)|\(item.size)|\(Int(item.lastUsed?.timeIntervalSince1970 ?? 0))"
+        if let project = item.project {
+            // A project's line only changes when its description does.
+            return "project|\(item.id)|\(stableHash(project.description ?? ""))"
+        }
+        return "\(item.id)|\(item.size)|\(Int(item.lastUsed?.timeIntervalSince1970 ?? 0))"
+    }
+
+    /// FNV-1a, stable across launches (unlike `hashValue`).
+    static func stableHash(_ text: String) -> String {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in text.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100_0000_01b3
+        }
+        return String(hash, radix: 16)
     }
 
     /// The facts the model sees. Nothing but the file's metadata, and it stays on this Mac.
@@ -101,6 +117,9 @@ final class SmartSuggestions {
     private static func generate(for item: CleanupItem) async -> String? {
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *) {
+            if let project = item.project {
+                return try? await ProjectBlurbWriter.write(facts: project.prompt)
+            }
             return try? await SuggestionWriter.write(facts: facts(for: item))
         }
         #endif
@@ -131,6 +150,34 @@ enum SuggestionWriter {
         let text = response.content.suggestion.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
         return String(text.prefix(200))
+    }
+}
+#endif
+
+#if canImport(FoundationModels)
+@available(macOS 26.0, *)
+@Generable
+struct ProjectBlurb {
+    @Guide(description: "What the project is, as a noun phrase of at most 12 words, in English")
+    var description: String
+}
+
+@available(macOS 26.0, *)
+enum ProjectBlurbWriter {
+    static let instructions = """
+        You describe a developer's code project in one short line, in English, from the facts given. \
+        Say what it is or does, not how active it is. Don't mention dates or maintenance. \
+        No quotes, no emoji.
+        """
+    /// Longer answers are dropped in favor of the plain line.
+    static let maximumWords = 20
+
+    static func write(facts: String) async throws -> String? {
+        let session = LanguageModelSession(instructions: instructions)
+        let response = try await session.respond(to: facts, generating: ProjectBlurb.self)
+        let text = response.content.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, text.split(separator: " ").count <= maximumWords else { return nil }
+        return text
     }
 }
 #endif

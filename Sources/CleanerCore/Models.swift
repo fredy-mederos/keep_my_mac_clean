@@ -105,6 +105,8 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
     public var blockers: [Blocker]
     public var lastUsed: Date?
     public var dateKind: DateKind
+    /// For project build folders: what the project is and how active it is.
+    public var project: ProjectProfile?
 
     public init(
         id: String,
@@ -120,7 +122,8 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
         revealURL: URL? = nil,
         blockers: [Blocker] = [],
         lastUsed: Date? = nil,
-        dateKind: DateKind = .used
+        dateKind: DateKind = .used,
+        project: ProjectProfile? = nil
     ) {
         self.id = id
         self.title = title
@@ -136,6 +139,7 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
         self.blockers = blockers
         self.lastUsed = lastUsed
         self.dateKind = dateKind
+        self.project = project
     }
 }
 

@@ -76,7 +76,7 @@ struct SettingsView: View {
             } header: {
                 Text("Suggestions")
             } footer: {
-                Text("Apple Intelligence writes a one-line suggestion for each of your large files and downloads, on this Mac. It only changes the text; what cleaning does stays the same.")
+                Text("Apple Intelligence, on this Mac, writes a one-line suggestion for each of your large files and downloads, and sums up projects whose README is long or not in English. It only changes text; what cleaning does stays the same.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
