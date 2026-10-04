@@ -10,6 +10,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var inactiveAfterMonths = 3
     /// Your own files at least this big show up under Large files and downloads.
     public var largeFileThresholdMB = 500
+    /// Let Apple's on-device model write the suggestions for your own files (macOS 26+).
+    public var smartSuggestions = false
 
     public init() {}
 
@@ -23,6 +25,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         lowSpaceThresholdGB = try container.decodeIfPresent(Int.self, forKey: .lowSpaceThresholdGB) ?? defaults.lowSpaceThresholdGB
         inactiveAfterMonths = try container.decodeIfPresent(Int.self, forKey: .inactiveAfterMonths) ?? defaults.inactiveAfterMonths
         largeFileThresholdMB = try container.decodeIfPresent(Int.self, forKey: .largeFileThresholdMB) ?? defaults.largeFileThresholdMB
+        smartSuggestions = try container.decodeIfPresent(Bool.self, forKey: .smartSuggestions) ?? defaults.smartSuggestions
     }
 
     public var lowSpaceThresholdBytes: Int64 { Int64(lowSpaceThresholdGB) * 1_000_000_000 }

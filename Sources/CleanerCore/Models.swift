@@ -25,6 +25,29 @@ public enum CleanupAction: Sendable, Hashable {
     }
 }
 
+/// What cleaning an item costs you, from cheapest to most serious.
+public enum CostLevel: Int, Sendable, Hashable, Comparable, CaseIterable {
+    /// Recreated locally; the next build is slower.
+    case rebuild
+    /// Fetched again from the network when needed.
+    case redownload
+    /// No data is lost, but you lose a possibility (rolling back, re-exporting a build, an old IDE's settings).
+    case loseOption
+    /// The contents can't be recovered.
+    case dataLoss
+
+    public static func < (lhs: CostLevel, rhs: CostLevel) -> Bool { lhs.rawValue < rhs.rawValue }
+
+    public var label: String {
+        switch self {
+        case .rebuild: "Rebuild"
+        case .redownload: "Re-download"
+        case .loseOption: "Lose an option"
+        case .dataLoss: "Data loss"
+        }
+    }
+}
+
 /// What `CleanupItem.lastUsed` means for this item, for display ("used 2 days ago", "added 3 months ago").
 public enum DateKind: String, Sendable, Hashable {
     case used, opened, added, modified
@@ -70,8 +93,13 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
     public var size: Int64
     public var safety: Safety
     public var action: CleanupAction
-    /// What happens after cleaning ("Xcode rebuilds this on the next build").
-    public var note: String?
+    /// Why it's listed, and for Review items why it needs a look. One sentence.
+    public var reason: String?
+    /// What you pay if you clean it ("~8.8 GB re-download from Apple").
+    public var cost: String?
+    public var costLevel: CostLevel?
+    /// What happens after cleaning ("Xcode copies them again when you connect the device").
+    public var afterCleaning: String?
     /// Where "Reveal in Finder" goes.
     public var revealURL: URL?
     public var blockers: [Blocker]
@@ -85,7 +113,10 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
         size: Int64,
         safety: Safety,
         action: CleanupAction,
-        note: String? = nil,
+        reason: String? = nil,
+        cost: String? = nil,
+        costLevel: CostLevel? = nil,
+        afterCleaning: String? = nil,
         revealURL: URL? = nil,
         blockers: [Blocker] = [],
         lastUsed: Date? = nil,
@@ -97,7 +128,10 @@ public struct CleanupItem: Identifiable, Sendable, Hashable {
         self.size = size
         self.safety = safety
         self.action = action
-        self.note = note
+        self.reason = reason
+        self.cost = cost
+        self.costLevel = costLevel
+        self.afterCleaning = afterCleaning
         self.revealURL = revealURL
         self.blockers = blockers
         self.lastUsed = lastUsed

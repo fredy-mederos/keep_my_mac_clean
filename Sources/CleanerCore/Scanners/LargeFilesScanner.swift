@@ -74,12 +74,18 @@ public struct LargeFilesScanner: CleanupScanner {
         }
     }
 
+    static let trashCost = "Recoverable from the Trash until you empty it"
+    static let trashAfterCleaning = "Moved to the Trash. The space comes back when you empty the Trash."
+
     // MARK: Large files anywhere in home
 
     /// Folders never searched for large files: system data, build outputs (covered elsewhere) and bundles.
     static let skippedFolderNames: Set<String> = [
         "Library", "Applications", "node_modules", "Pods", "DerivedData", "build", "Carthage", "target",
     ]
+    /// Top-level home folders never searched. Pictures and Music are excluded because entering them makes
+    /// macOS ask for Photos and media access.
+    static let skippedHomeFolders: Set<String> = ["Library", "Applications", "Pictures", "Music"]
     static let skippedPackageExtensions: Set<String> = [
         "app", "photoslibrary", "musiclibrary", "tvlibrary", "xcarchive", "xcodeproj", "xcworkspace",
         "bundle", "framework", "logicx", "fcpbundle", "imovielibrary",
@@ -127,7 +133,7 @@ public struct LargeFilesScanner: CleanupScanner {
     func largeFiles(_ context: ScanContext) -> [CleanupItem] {
         let roots = FileInfo.subdirectories(of: context.home).filter {
             let name = $0.lastPathComponent
-            return !name.hasPrefix(".") && !Self.skippedFolderNames.contains(name)
+            return !name.hasPrefix(".") && !Self.skippedFolderNames.contains(name) && !Self.skippedHomeFolders.contains(name)
         }
         let downloads = context.path("Downloads").standardizedFileURL.path
         return Self.findLargeFiles(in: roots, minimumSize: context.largeFileMinimumSize, skipFilesDirectlyIn: [downloads])
@@ -141,7 +147,9 @@ public struct LargeFilesScanner: CleanupScanner {
                     size: file.size,
                     safety: .personal,
                     action: .moveToTrash([file.url]),
-                    note: Self.suggestion(for: file.url, kind: kind),
+                    reason: Self.suggestion(for: file.url, kind: kind),
+                    cost: Self.trashCost,
+                    afterCleaning: Self.trashAfterCleaning,
                     revealURL: file.url,
                     lastUsed: opened ?? FileInfo.modificationDate(file.url),
                     dateKind: opened == nil ? .modified : .opened
@@ -192,7 +200,9 @@ public struct LargeFilesScanner: CleanupScanner {
                 size: size,
                 safety: .personal,
                 action: .moveToTrash([url]),
-                note: Self.suggestion(for: url, kind: kind),
+                reason: Self.suggestion(for: url, kind: kind),
+                cost: Self.trashCost,
+                afterCleaning: Self.trashAfterCleaning,
                 revealURL: url,
                 lastUsed: added ?? FileInfo.modificationDate(url),
                 dateKind: .added

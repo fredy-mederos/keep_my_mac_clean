@@ -26,6 +26,26 @@ extension Safety {
     }
 }
 
+extension CostLevel {
+    var tint: Color {
+        switch self {
+        case .rebuild: .secondary
+        case .redownload: .blue
+        case .loseOption: .orange
+        case .dataLoss: .red
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .rebuild: "hammer"
+        case .redownload: "arrow.down.circle"
+        case .loseOption: "arrow.uturn.backward.circle"
+        case .dataLoss: "exclamationmark.triangle.fill"
+        }
+    }
+}
+
 extension AppModel.SpaceStatus {
     var tint: Color {
         switch self {

@@ -9,6 +9,8 @@ public struct ScanContext: Sendable {
     public var runsSystemCommands: Bool
     /// Your own files at least this big are listed under Large files.
     public var largeFileMinimumSize: Int64
+    /// Projects inside `projectLocations`. Found once per scan by the engine and shared by scanners.
+    public var projects: [URL]?
 
     public init(
         home: URL,
@@ -26,6 +28,10 @@ public struct ScanContext: Sendable {
 
     func path(_ relative: String) -> URL {
         home.appendingPathComponent(relative)
+    }
+
+    func allProjects() -> [URL] {
+        projects ?? ProjectDiscovery.projects(inLocations: projectLocations)
     }
 }
 
@@ -93,10 +99,16 @@ public enum ScanEngine {
     ) -> AsyncStream<ScanSnapshot> {
         AsyncStream { continuation in
             let task = Task.detached(priority: .utility) {
+                var context = context
+                if context.projects == nil {
+                    context.projects = ProjectDiscovery.projects(inLocations: context.projectLocations)
+                }
+                let sharedContext = context
+
                 // 1. Every scanner lists its probes (fast, in parallel).
                 let listed = await withTaskGroup(of: (Int, [ItemProbe]).self) { group in
                     for (index, scanner) in scanners.enumerated() {
-                        group.addTask { (index, scanner.probes(in: context)) }
+                        group.addTask { (index, scanner.probes(in: sharedContext)) }
                     }
                     var result: [(Int, [ItemProbe])] = []
                     for await entry in group { result.append(entry) }
@@ -152,6 +164,9 @@ public enum ScanEngine {
 }
 
 extension CleanupItem {
+    /// Placeholder in reason, cost and afterCleaning texts, replaced with the measured size ("~1.1 GB").
+    static let sizePlaceholder = "{size}"
+
     /// Convenience for the common "delete these folders" item. Returns nil when nothing exists.
     static func folders(
         id: String,
@@ -159,21 +174,31 @@ extension CleanupItem {
         detail: String? = nil,
         urls: [URL],
         safety: Safety,
-        note: String?,
+        reason: String?,
+        cost: String?,
+        costLevel: CostLevel?,
+        afterCleaning: String? = nil,
         revealURL: URL? = nil,
         blockers: [Blocker] = [],
         lastUsed: Date? = nil
     ) -> CleanupItem? {
         let existing = urls.filter(FileInfo.exists)
         guard !existing.isEmpty else { return nil }
+        let size = DirectorySize.allocatedSize(of: existing)
+        let fill = { (text: String?) in
+            text?.replacingOccurrences(of: sizePlaceholder, with: "~\(ByteFormat.short(size))")
+        }
         return CleanupItem(
             id: id,
             title: title,
             detail: detail,
-            size: DirectorySize.allocatedSize(of: existing),
+            size: size,
             safety: safety,
             action: .removePaths(existing),
-            note: note,
+            reason: fill(reason),
+            cost: fill(cost),
+            costLevel: costLevel,
+            afterCleaning: fill(afterCleaning),
             revealURL: revealURL ?? existing.first,
             blockers: blockers,
             lastUsed: lastUsed

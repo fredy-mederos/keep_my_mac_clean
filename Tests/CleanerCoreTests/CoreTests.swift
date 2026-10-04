@@ -242,7 +242,7 @@ import Testing
         #expect(byID["gradle.modules"]?.safety == .review)
         #expect(byID["gradle.version:7.6"]?.detail == "No installed Gradle uses this version")
         #expect(byID["gradle.version:8.13"]?.detail == "Gradle 8.13 is installed")
-        #expect(byID["gradle.wrapper:gradle-8.13-bin"]?.detail == "Newest installed")
+        #expect(byID["gradle.wrapper:gradle-8.13-bin"]?.detail == "Newest installed, no project uses it")
     }
 }
 

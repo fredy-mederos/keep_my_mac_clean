@@ -71,7 +71,10 @@ public struct DockerScanner: CleanupScanner {
                     id: "docker.build-cache", title: "Docker build cache", detail: "Layers cached by docker build",
                     size: size, safety: .safe,
                     action: .command(executable: docker, arguments: ["builder", "prune", "--all", "--force"]),
-                    note: "Docker rebuilds layers on the next build, so the next build is slower."
+                    reason: "Layers cached by docker build to speed up rebuilds.",
+                    cost: "The next docker build of each image is slower",
+                    costLevel: .rebuild,
+                    afterCleaning: "Removed with `docker builder prune`. Docker caches layers again as you build."
                 )
             case "Images":
                 return CleanupItem(
@@ -79,7 +82,10 @@ public struct DockerScanner: CleanupScanner {
                     detail: "\(max(total - active, 0)) of \(total) images aren't used by any container",
                     size: size, safety: .review,
                     action: .command(executable: docker, arguments: ["image", "prune", "--all", "--force"]),
-                    note: "Images are pulled or built again when you need them."
+                    reason: "\(max(total - active, 0)) images that no container, running or stopped, uses.",
+                    cost: "Pulled again from the registry or rebuilt when you need them",
+                    costLevel: .redownload,
+                    afterCleaning: "Removed with `docker image prune --all`."
                 )
             case "Containers":
                 return CleanupItem(
@@ -87,7 +93,10 @@ public struct DockerScanner: CleanupScanner {
                     detail: "\(max(total - active, 0)) stopped containers",
                     size: size, safety: .review,
                     action: .command(executable: docker, arguments: ["container", "prune", "--force"]),
-                    note: "Removes stopped containers and anything written inside them."
+                    reason: "Containers that exited and aren't running.",
+                    cost: "Anything written inside these containers (not in a volume) is lost",
+                    costLevel: .dataLoss,
+                    afterCleaning: "Removed with `docker container prune`. Start new containers from their images."
                 )
             case "Local Volumes":
                 return CleanupItem(
@@ -95,7 +104,10 @@ public struct DockerScanner: CleanupScanner {
                     detail: "\(max(total - active, 0)) volumes not attached to a container",
                     size: size, safety: .review,
                     action: .command(executable: docker, arguments: ["volume", "prune", "--all", "--force"]),
-                    note: "Volumes can hold databases and other data. Removed volumes can't be recovered."
+                    reason: "Volumes no container is attached to. They often hold databases and uploads.",
+                    cost: "Their data (databases, uploads…) can't be recovered",
+                    costLevel: .dataLoss,
+                    afterCleaning: "Removed with `docker volume prune --all`."
                 )
             default:
                 return nil

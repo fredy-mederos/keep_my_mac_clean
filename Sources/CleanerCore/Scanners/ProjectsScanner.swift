@@ -9,16 +9,19 @@ public struct ProjectsScanner: CleanupScanner {
 
     public init() {}
 
+    /// Folders that come back through a package install rather than a local build.
+    static let downloadedArtifacts: Set<String> = ["node_modules", "Pods", ".dart_tool"]
+
     public func probes(in context: ScanContext) -> [ItemProbe] {
-        ProjectDiscovery.projects(inLocations: context.projectLocations).map { project in
+        context.allProjects().map { project in
             .one {
                 let artifacts = ProjectArtifacts.findArtifacts(in: project)
                 guard !artifacts.isEmpty else { return nil }
-                let kinds = Set(artifacts.map { ProjectArtifacts.displayName(forFolder: $0.lastPathComponent) })
-                    .sorted()
-                    .joined(separator: ", ")
+                let names = Set(artifacts.map(\.lastPathComponent))
+                let kinds = names.map(ProjectArtifacts.displayName(forFolder:)).sorted().joined(separator: ", ")
                 let count = artifacts.count == 1 ? "1 folder" : "\(artifacts.count) folders"
                 let location = PathFormat.abbreviated(project, home: context.home)
+                let downloads = names.intersection(Self.downloadedArtifacts).sorted()
                 return CleanupItem(
                     id: "project:\(project.path)",
                     title: project.lastPathComponent,
@@ -26,7 +29,12 @@ public struct ProjectsScanner: CleanupScanner {
                     size: DirectorySize.allocatedSize(of: artifacts),
                     safety: .safe,
                     action: .removePaths(artifacts),
-                    note: "\(location)\n\nBuild tools recreate these. The next build or install of this project will take longer.",
+                    reason: "Build outputs (\(kinds)) in \(location). Your source files aren't touched.",
+                    cost: downloads.isEmpty
+                        ? "Next build of this project starts from scratch"
+                        : "Next install re-downloads \(downloads.joined(separator: ", "))",
+                    costLevel: downloads.isEmpty ? .rebuild : .redownload,
+                    afterCleaning: "Build tools recreate these the next time you build or install dependencies.",
                     revealURL: project,
                     lastUsed: ProjectArtifacts.lastActivity(of: project)
                 )

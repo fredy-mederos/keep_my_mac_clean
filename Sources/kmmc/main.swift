@@ -66,6 +66,10 @@ case "scan":
             case .personal: "[to trash] "
             }
             print("   \(size) \(badge)\(item.title)\(item.detail.map { " — \($0)" } ?? "")")
+            if item.safety == .review, let cost = item.cost {
+                print("              ↳ \(item.costLevel?.label ?? "No cost"): \(cost)")
+                if let reason = item.reason { print("                \(reason)") }
+            }
         }
         print()
     }

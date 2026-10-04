@@ -29,6 +29,7 @@ final class AppModel {
     var filter: Safety?
     var phase: CleanPhase = .idle
     private(set) var runningBlockers: [Blocker] = []
+    let suggestions = SmartSuggestions()
 
     var settings: AppSettings {
         didSet {
@@ -305,6 +306,22 @@ final class AppModel {
         selection.subtract(cleanedIDs)
         refreshDisk()
         phase = .finished(freed: freed, trashed: trashed, cleaned: cleanedIDs.count, errors: errors)
+    }
+
+    // MARK: Suggestions
+
+    /// The suggestion shown for one of your files: the on-device model's when enabled and ready,
+    /// otherwise the fixed one.
+    func suggestion(for item: CleanupItem) -> (text: String, isGenerated: Bool)? {
+        if settings.smartSuggestions, let generated = suggestions.text(for: item) {
+            return (generated, true)
+        }
+        return item.reason.map { ($0, false) }
+    }
+
+    func requestSuggestion(for item: CleanupItem) {
+        guard settings.smartSuggestions else { return }
+        suggestions.request(item)
     }
 
     // MARK: Misc

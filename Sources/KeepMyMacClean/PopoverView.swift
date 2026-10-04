@@ -385,6 +385,7 @@ private struct ItemRow: View {
     @Environment(AppModel.self) private var model
     let item: CleanupItem
     @State private var isHovering = false
+    @State private var showsInfo = false
 
     private var isSelected: Bool { model.selection.contains(item.id) }
 
@@ -410,12 +411,15 @@ private struct ItemRow: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
+                costLine
+                suggestionLine
             }
             Spacer(minLength: 8)
             Text(ByteFormat.standard(item.size))
                 .font(.system(size: 11.5, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
+            infoButton
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
@@ -428,10 +432,67 @@ private struct ItemRow: View {
         .contentShape(Rectangle())
         .onHover { isHovering = $0 }
         .onTapGesture { model.toggle(item) }
-        .help(item.note ?? "")
+        .onAppear { model.requestSuggestion(for: item) }
         .contextMenu {
+            Button("About this item") { showsInfo = true }
             Button("Reveal in Finder") { model.reveal(item) }
                 .disabled(item.revealURL == nil)
+        }
+    }
+
+    /// On Review rows: what cleaning costs, colored by how serious it is.
+    @ViewBuilder
+    private var costLine: some View {
+        if item.safety == .review, let cost = item.cost, let level = item.costLevel {
+            Label {
+                Text(cost)
+            } icon: {
+                Image(systemName: level.symbol)
+            }
+            .font(.caption)
+            .foregroundStyle(level.tint)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .labelStyle(CompactLabelStyle())
+        }
+    }
+
+    /// On your own files: the suggestion, written on-device when Smarter suggestions is on.
+    @ViewBuilder
+    private var suggestionLine: some View {
+        if item.safety == .personal, let suggestion = model.suggestion(for: item) {
+            Label {
+                Text(suggestion.text)
+            } icon: {
+                Image(systemName: suggestion.isGenerated ? "sparkles" : "lightbulb")
+            }
+            .font(.caption)
+            .foregroundStyle(suggestion.isGenerated ? Color.purple : Color.secondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .labelStyle(CompactLabelStyle())
+        }
+    }
+
+    @ViewBuilder
+    private var infoButton: some View {
+        if item.reason != nil || item.cost != nil || item.afterCleaning != nil {
+            Button {
+                showsInfo.toggle()
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(isHovering || showsInfo ? Color.secondary : Color.secondary.opacity(0.45))
+                    .frame(width: 16, height: 16)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("What cleaning this costs")
+            .accessibilityLabel("About \(item.title)")
+            .popover(isPresented: $showsInfo, arrowEdge: .leading) {
+                ItemInfoView(item: item)
+                    .environment(model)
+            }
         }
     }
 
@@ -443,6 +504,91 @@ private struct ItemRow: View {
         }
         if let detail = item.detail, !detail.isEmpty { parts.append(detail) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+}
+
+/// Icon and text close together, icon sized to the text.
+private struct CompactLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.icon.imageScale(.small)
+            configuration.title
+        }
+    }
+}
+
+/// The ⓘ popover: why an item is listed, what cleaning it costs, and what happens afterwards.
+private struct ItemInfoView: View {
+    @Environment(AppModel.self) private var model
+    let item: CleanupItem
+
+    var body: some View {
+        let suggestion = item.safety == .personal ? model.suggestion(for: item) : nil
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(item.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Text(ByteFormat.standard(item.size))
+                    .font(.system(.callout, design: .rounded).weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+
+            if let text = suggestion?.text ?? item.reason {
+                section(item.safety == .personal ? "Suggestion" : "Why it's listed", symbol: item.safety == .personal ? "lightbulb" : "questionmark.circle") {
+                    Text(text)
+                    if suggestion?.isGenerated == true {
+                        Label("Written on this Mac by Apple Intelligence", systemImage: "sparkles")
+                            .font(.caption2)
+                            .foregroundStyle(.purple)
+                    }
+                }
+            }
+
+            if let cost = item.cost {
+                section("What it costs", symbol: item.costLevel?.symbol ?? "checkmark.circle") {
+                    if let level = item.costLevel {
+                        Tag(text: level.label, tint: level.tint == .secondary ? .gray : level.tint)
+                    }
+                    Text(cost)
+                        .foregroundStyle(item.costLevel == .dataLoss ? Color.red : Color.primary)
+                }
+            }
+
+            if let after = item.afterCleaning {
+                section("After cleaning", symbol: "arrow.triangle.2.circlepath") {
+                    Text(after)
+                }
+            }
+
+            if !item.blockers.isEmpty {
+                Label("Quit \(item.blockers.map(\.name).joined(separator: " and ")) before cleaning for best results.", systemImage: "exclamationmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if item.revealURL != nil {
+                Button("Reveal in Finder") { model.reveal(item) }
+                    .buttonStyle(.link)
+                    .font(.callout)
+            }
+        }
+        .font(.callout)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(16)
+        .frame(width: 300, alignment: .leading)
+    }
+
+    private func section(_ title: String, symbol: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(title, systemImage: symbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+            content()
+        }
     }
 }
 
@@ -543,6 +689,7 @@ private struct FooterBar: View {
         let deleteSize = toDelete.reduce(Int64(0)) { $0 + $1.size }
         let trashSize = toTrash.reduce(Int64(0)) { $0 + $1.size }
         let reviewCount = selected.filter { $0.safety == .review }.count
+        let dataLoss = selected.filter { $0.costLevel == .dataLoss }
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
@@ -565,6 +712,18 @@ private struct FooterBar: View {
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    if !dataLoss.isEmpty {
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "exclamationmark.octagon.fill")
+                            Text(dataLossWarning(dataLoss))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.red)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .card(cornerRadius: 8, fill: Color.red.opacity(0.1))
+                    }
                     if reviewCount > 0 {
                         Label("\(reviewCount) marked Review", systemImage: "eye")
                             .font(.caption)
@@ -582,12 +741,20 @@ private struct FooterBar: View {
                 Button("Cancel") { model.cancelClean() }
                     .secondaryActionStyle()
                     .keyboardShortcut(.cancelAction)
-                Button(toDelete.isEmpty ? "Move to Trash" : "Delete", role: .destructive) {
+                Button(toDelete.isEmpty ? "Move to Trash" : (dataLoss.isEmpty ? "Delete" : "Delete anyway"), role: .destructive) {
                     Task { await model.clean() }
                 }
                 .primaryActionStyle(tint: toDelete.isEmpty ? .blue : .red)
             }
         }
+    }
+
+    /// "2 can't be recovered: Unused Docker volumes, Emulator: Pixel 8."
+    private func dataLossWarning(_ items: [CleanupItem]) -> String {
+        let names = items.prefix(3).map(\.title).joined(separator: ", ")
+        let more = items.count > 3 ? " and \(items.count - 3) more" : ""
+        let subject = items.count == 1 ? "1 item loses data" : "\(items.count) items lose data"
+        return "\(subject) that can't be recovered: \(names)\(more)."
     }
 
     private func headline(deleteCount: Int, deleteSize: Int64, trashCount: Int, trashSize: Int64) -> String {

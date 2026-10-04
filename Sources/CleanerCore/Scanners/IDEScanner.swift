@@ -102,7 +102,11 @@ public struct IDEScanner: CleanupScanner {
                 detail: current.map { "You now use \($0)" } ?? "Settings, caches and logs",
                 urls: urls,
                 safety: .review,
-                note: "Settings, caches and logs of a version you no longer run. Newer versions import settings when you upgrade.",
+                reason: current.map { "Data from \(version.displayName). You now use \($0), which imported its settings when you upgraded." }
+                    ?? "Settings, caches and logs of \(version.displayName), a version you no longer run.",
+                cost: "You lose that version's own settings, plugins and local history if you ever go back to it",
+                costLevel: .loseOption,
+                afterCleaning: "Your current version keeps working with its own settings.",
                 lastUsed: urls.compactMap(FileInfo.modificationDate).max()
             ) }
         }
@@ -110,12 +114,17 @@ public struct IDEScanner: CleanupScanner {
         probes.append(.one { CleanupItem.folders(
             id: "ide.toolbox.downloads", title: "JetBrains Toolbox downloads", detail: "~/Library/Caches/JetBrains/Toolbox/download",
             urls: [context.path("Library/Caches/JetBrains/Toolbox/download")], safety: .safe,
-            note: "Installers Toolbox already used."
+            reason: "Installers JetBrains Toolbox already used.",
+            cost: "Nothing: the IDEs are already installed",
+            costLevel: nil
         ) })
         probes.append(.one { CleanupItem.folders(
             id: "ide.toolbox.backup", title: "JetBrains Toolbox rollback backups", detail: "~/Library/Caches/JetBrains/Toolbox/backup",
             urls: [context.path("Library/Caches/JetBrains/Toolbox/backup")], safety: .review,
-            note: "Copies of previous IDE versions so Toolbox can roll back an update."
+            reason: "Copies of previous IDE versions JetBrains Toolbox keeps for rollbacks.",
+            cost: "You can't roll back an IDE update from Toolbox",
+            costLevel: .loseOption,
+            afterCleaning: "Toolbox keeps a new backup the next time it updates an IDE."
         ) })
 
         for (app, folder) in [("VS Code", "Code"), ("VS Code Insiders", "Code - Insiders")] {
@@ -124,7 +133,10 @@ public struct IDEScanner: CleanupScanner {
                 id: "ide.vscode:\(folder)", title: "\(app) caches", detail: PathFormat.abbreviated(base, home: context.home),
                 urls: ["Cache", "CachedData", "CachedExtensionVSIXs", "Code Cache", "GPUCache"].map { base.appendingPathComponent($0) },
                 safety: .safe,
-                note: "\(app) recreates these on launch.",
+                reason: "Caches \(app) rebuilds on its own.",
+                cost: "\(app) starts a little slower once",
+                costLevel: .rebuild,
+                afterCleaning: "\(app) recreates these on launch.",
                 revealURL: base,
                 blockers: [.vsCode]
             ) })

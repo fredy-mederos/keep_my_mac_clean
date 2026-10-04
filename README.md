@@ -18,6 +18,10 @@ swift run kmmc discover            # read-only: show where your projects were fo
 swift run kmmc history             # read-only: free-space samples and the current trend
 ```
 
+`build-app.sh` stamps each build: the version in `Resources/Info.plist` (bumped by hand for milestones), the
+build number (commit count), the short commit hash (`-dirty` when built with uncommitted changes) and the build
+date. Settings → About shows them.
+
 On first launch the app walks your home folder for projects and remembers their parent folders
 (`~/Documents/projects`, `~/AndroidStudioProjects`...). Edit them in Settings. macOS asks once for
 access to Documents, Desktop and Downloads.
@@ -31,7 +35,28 @@ access to Documents, Desktop and Downloads.
 | My files | Your own files. Only ever moved to the Trash, with a suggestion for each. | Installers, archives already extracted, APK/IPA builds, videos, VM disks, ML models, old downloads |
 
 Caches are deleted permanently (moving gigabytes of caches to the Trash frees nothing); your own files
-go to the Trash. Where a tool
+go to the Trash.
+
+Every item says why it's listed, what cleaning costs and what happens afterwards (the ⓘ button). Review
+rows show the cost inline, colored by level:
+
+| Cost level | Meaning | Examples |
+|---|---|---|
+| Rebuild | Recreated locally, next build is slower | DerivedData, Gradle build cache |
+| Re-download | Fetched again from the network | Simulator runtimes ("~8.8 GB from Apple"), Gradle dependencies, SDK platforms |
+| Lose an option | No data lost, but a possibility is gone | Toolbox rollback backups, old IDE settings |
+| Data loss | Can't be recovered (red, and called out when confirming) | Emulators, Docker volumes and stopped containers, Xcode archives (dSYMs) |
+
+Facts come from your projects where cheap: which Gradle version each project's wrapper uses, which API levels
+they compile against, which Podfiles still use the git CocoaPods specs, how many simulators use a runtime.
+
+## Smarter suggestions (optional)
+
+With Settings → Suggestions → "Smarter suggestions (on-device AI)" on (macOS 26+ with Apple Intelligence),
+Apple's on-device Foundation Models write a one-line suggestion for each of your own files from its name, type,
+folder, size and dates. Suggestions are generated when a row appears, cached in
+`~/Library/Application Support/KeepMyMacClean/suggestions.json`, and fall back to the fixed text. The model
+only writes text; it never changes what an item is or what cleaning does. Nothing leaves your Mac. Where a tool
 has its own cleanup command, the app uses it (`xcrun simctl delete unavailable`, `xcrun simctl runtime delete`).
 Every path passes `PathGuard` before deletion: it must be at least two levels inside your home folder and
 never one of the well-known folders.
@@ -61,4 +86,5 @@ A notification fires when free space drops below your threshold, or when the cur
 1. ✅ Menu bar free space, dev cleaners (safe + review), project discovery, low-space alert, open at login
 2. ✅ One-click selection of inactive projects and DerivedData, older Android SDK platforms/sources/build tools, Docker (`docker system df` + prune)
 3. ✅ Large files and downloads with suggestions (Trash only), free-space history, trend and "days until full", category growth, redesigned popover
-4. Treemap explorer, Full Disk Access view of hidden space (Trash, Photos, device backups)
+4. ✅ Cost of cleaning on every item (reason, cost level, ⓘ details, data-loss warning), optional on-device AI suggestions, build version in Settings
+5. Treemap explorer, Full Disk Access view of hidden space (Trash, Photos, device backups)

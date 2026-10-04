@@ -18,7 +18,10 @@ public struct XcodeScanner: CleanupScanner {
             title: "SwiftUI preview data",
             urls: [context.path("Library/Developer/Xcode/UserData/Previews")],
             safety: .safe,
-            note: "Xcode recreates preview simulators when you open a preview.",
+            reason: "Simulators and build data Xcode made for SwiftUI previews.",
+            cost: "Previews take longer to show the first time",
+            costLevel: .rebuild,
+            afterCleaning: "Xcode recreates preview data when you open a preview.",
             blockers: [.xcode]
         ) })
         probes.append(.one { CleanupItem.folders(
@@ -26,7 +29,10 @@ public struct XcodeScanner: CleanupScanner {
             title: "Simulator caches",
             urls: [context.path("Library/Developer/CoreSimulator/Caches")],
             safety: .safe,
-            note: "Simulators rebuild these caches on their next launch.",
+            reason: "Caches simulators build at launch, such as the shared dyld cache.",
+            cost: "Simulators start slower once",
+            costLevel: .rebuild,
+            afterCleaning: "Simulators rebuild these caches on their next launch.",
             blockers: [.simulator]
         ) })
         if context.runsSystemCommands {
@@ -55,10 +61,11 @@ public struct XcodeScanner: CleanupScanner {
             let workspace = (info?["WorkspacePath"] as? String).map { URL(fileURLWithPath: $0) }
             let title = workspace?.deletingPathExtension().lastPathComponent ?? Self.projectName(fromDerivedDataFolder: dir.lastPathComponent)
             let detail: String
+            let projectIsGone = workspace.map { !FileInfo.exists($0) } ?? false
             if let workspace {
-                detail = FileInfo.exists(workspace)
-                    ? PathFormat.abbreviated(workspace.deletingLastPathComponent(), home: context.home)
-                    : "Project no longer exists"
+                detail = projectIsGone
+                    ? "Project no longer exists"
+                    : PathFormat.abbreviated(workspace.deletingLastPathComponent(), home: context.home)
             } else {
                 detail = "Build data"
             }
@@ -69,7 +76,12 @@ public struct XcodeScanner: CleanupScanner {
                 detail: detail,
                 urls: [dir],
                 safety: .safe,
-                note: "Xcode rebuilds this on the next build. The first build will be slower.",
+                reason: projectIsGone
+                    ? "Build data for \(title), whose project folder no longer exists."
+                    : "Build products and the index for \(title). Xcode recreates everything here.",
+                cost: projectIsGone ? "Nothing: no project uses it anymore" : "Next build of \(title) is a full rebuild",
+                costLevel: projectIsGone ? nil : .rebuild,
+                afterCleaning: "Xcode rebuilds and re-indexes the project the next time you build it.",
                 blockers: [.xcode],
                 lastUsed: lastUsed
             ) })
@@ -80,7 +92,10 @@ public struct XcodeScanner: CleanupScanner {
             detail: "DerivedData",
             urls: shared,
             safety: .safe,
-            note: "Precompiled modules shared by all projects. Xcode rebuilds them as needed.",
+            reason: "Precompiled system and package modules shared by all your Xcode projects.",
+            cost: "The first build of each project is slower",
+            costLevel: .rebuild,
+            afterCleaning: "Xcode rebuilds the modules it needs as you build.",
             revealURL: root,
             blockers: [.xcode]
         ) })
@@ -163,13 +178,26 @@ public struct XcodeScanner: CleanupScanner {
                     }
                 }
                 let detail = detailParts.isEmpty ? "\(platform) device symbols" : detailParts.joined(separator: " · ")
+                let device = entry?.model ?? "a device"
+                let version = entry.map { "\(platform) \($0.version)" } ?? platform
+                let reason: String
+                if let entry, !newestPerDevice.contains(entry.folderName) {
+                    reason = "Symbols for an older \(platform) on \(device); a newer version for that device is also here."
+                } else if let newestVersion, let entry, Version.isOrderedBefore(entry.version, newestVersion) {
+                    reason = "Symbols for \(version) from \(device). Your newest device runs \(platform) \(newestVersion)."
+                } else {
+                    reason = "Symbols Xcode needs to debug apps on \(device) running \(version)."
+                }
                 probes.append(.one { CleanupItem.folders(
                     id: "xcode.devicesupport:\(folder.path)",
                     title: title,
                     detail: detail,
                     urls: [folder],
                     safety: .review,
-                    note: "Debug symbols copied from a device. Xcode copies them again (a few minutes) next time you connect a device on this version.",
+                    reason: reason,
+                    cost: "{size} copied again from the device the next time you debug on \(version)",
+                    costLevel: .redownload,
+                    afterCleaning: "Xcode copies the symbols again when you connect a device running \(version). It takes a few minutes and needs that device.",
                     blockers: [.xcode],
                     lastUsed: FileInfo.modificationDate(folder)
                 ) })
@@ -190,13 +218,17 @@ public struct XcodeScanner: CleanupScanner {
                     let name = info?["Name"] as? String ?? archive.deletingPathExtension().lastPathComponent
                     let appProperties = info?["ApplicationProperties"] as? [String: Any]
                     let version = appProperties?["CFBundleShortVersionString"] as? String
+                    let build = [name, version].compactMap { $0 }.joined(separator: " ")
                     return CleanupItem.folders(
                         id: "xcode.archive:\(archive.path)",
-                        title: [name, version].compactMap { $0 }.joined(separator: " "),
+                        title: build,
                         detail: "Archive from \(dateFolder.lastPathComponent)",
                         urls: [archive],
                         safety: .review,
-                        note: "Needed to re-export this build or symbolicate its crash reports.",
+                        reason: "Archive of \(build): the signed app and its debug symbols (dSYMs).",
+                        cost: "Its dSYMs are gone: crashes from this build can't be symbolicated unless they're uploaded elsewhere",
+                        costLevel: .dataLoss,
+                        afterCleaning: "You can't re-export or re-upload this exact build. Rebuilding the same code gives different symbols.",
                         lastUsed: info?["CreationDate"] as? Date
                     )
                 })
@@ -221,7 +253,10 @@ public struct XcodeScanner: CleanupScanner {
                 size: DirectorySize.allocatedSize(of: folders),
                 safety: .safe,
                 action: .command(executable: "/usr/bin/xcrun", arguments: ["simctl", "delete", "unavailable"]),
-                note: "These can't run anymore. Removed with `xcrun simctl delete unavailable`.",
+                reason: "Their iOS runtime is no longer installed, so they can't run.",
+                cost: "Nothing: they can't be used anymore",
+                costLevel: nil,
+                afterCleaning: "Removed with `xcrun simctl delete unavailable`.",
                 revealURL: context.path("Library/Developer/CoreSimulator/Devices"),
                 blockers: [.simulator]
             ))
@@ -229,6 +264,8 @@ public struct XcodeScanner: CleanupScanner {
 
         for runtime in SimulatorRuntime.load() where runtime.deletable {
             let users = devices.filter { $0.isAvailable && $0.runtimeIdentifier == runtime.runtimeIdentifier }.count
+            let name = "\(runtime.platformName) \(runtime.version)"
+            let size = "~\(ByteFormat.short(runtime.sizeBytes))"
             items.append(CleanupItem(
                 id: "xcode.runtime:\(runtime.identifier)",
                 title: "\(runtime.platformName) \(runtime.version) simulator runtime",
@@ -236,7 +273,14 @@ public struct XcodeScanner: CleanupScanner {
                 size: runtime.sizeBytes,
                 safety: .review,
                 action: .command(executable: "/usr/bin/xcrun", arguments: ["simctl", "runtime", "delete", runtime.identifier]),
-                note: "You can download it again from Xcode → Settings → Components. Simulators using it become unavailable.",
+                reason: users == 0
+                    ? "\(name) runtime that none of your simulators use."
+                    : "\(name) runtime used by \(ProjectFacts.count(users, "simulator")).",
+                cost: users == 0
+                    ? "\(size) re-download from Apple if you need \(name) again"
+                    : "\(size) re-download from Apple, and \(ProjectFacts.count(users, "simulator")) stop working until then",
+                costLevel: .redownload,
+                afterCleaning: "Download it again in Xcode → Settings → Components to test on \(name).",
                 blockers: [.simulator, .xcode]
             ))
         }
