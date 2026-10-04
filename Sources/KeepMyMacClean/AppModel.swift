@@ -9,6 +9,8 @@ final class AppModel {
         case idle
         case confirming
         case cleaning(done: Int, total: Int, current: String)
+        /// Making sure what was cleaned is really gone.
+        case verifying
         case finished(freed: Int64, trashed: Int64, cleaned: Int, errors: [String])
     }
 
@@ -170,8 +172,14 @@ final class AppModel {
 
     // MARK: Scanning
 
+    /// Set when a rescan is asked for while one is running, so it runs again with fresh data.
+    private var rescanRequested = false
+
     func rescan() async {
-        guard !isScanning else { return }
+        guard !isScanning else {
+            rescanRequested = true
+            return
+        }
         isScanning = true
         scanStatus = "Scanning…"
         defer {
@@ -195,6 +203,10 @@ final class AppModel {
         saveHistory()
         refreshDisk()
         refreshDigest()
+        if rescanRequested {
+            rescanRequested = false
+            await rescan()
+        }
     }
 
     // MARK: Weekly summary
@@ -328,8 +340,18 @@ final class AppModel {
                 errors.append("\(item.title): \(error)")
             } else {
                 cleanedIDs.insert(item.id)
-                if item.action.movesToTrash { trashed += item.size } else { freed += item.size }
             }
+        }
+
+        // A command can exit successfully without removing anything, so check before claiming space back.
+        phase = .verifying
+        let stillThere = await itemsStillPresent(items.filter { cleanedIDs.contains($0.id) })
+        for item in stillThere {
+            cleanedIDs.remove(item.id)
+            errors.append("\(item.title): still there after cleaning")
+        }
+        for item in items where cleanedIDs.contains(item.id) {
+            if item.action.movesToTrash { trashed += item.size } else { freed += item.size }
         }
 
         for index in categories.indices {
@@ -339,6 +361,39 @@ final class AppModel {
         selection.subtract(cleanedIDs)
         refreshDisk()
         phase = .finished(freed: freed, trashed: trashed, cleaned: cleanedIDs.count, errors: errors)
+
+        // Then bring the whole list in line with the disk.
+        Task { await rescan() }
+    }
+
+    /// Cleaned items that are in fact still there: files or folders left on disk, or, for commands,
+    /// items their scanner still finds at about the same size.
+    private func itemsStillPresent(_ items: [CleanupItem]) async -> [CleanupItem] {
+        var stillThere: [CleanupItem] = []
+        var commandItems: [CleanupItem] = []
+        for item in items {
+            switch item.action {
+            case .removePaths(let urls), .moveToTrash(let urls):
+                if urls.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) { stillThere.append(item) }
+            case .command:
+                commandItems.append(item)
+            }
+        }
+        guard !commandItems.isEmpty else { return stillThere }
+
+        let categoryIDs = Set(commandItems.compactMap { item in categories.first { $0.items.contains { $0.id == item.id } }?.id })
+        let scanners = ScanEngine.scanners.filter { categoryIDs.contains($0.categoryID) }
+        let context = ScanContext(home: home, projectLocations: projectLocations, largeFileMinimumSize: settings.largeFileThresholdBytes)
+        var fresh: [CleanupItem] = []
+        for await snapshot in ScanEngine.run(scanners, context: context) {
+            fresh = snapshot.categories.flatMap(\.items)
+        }
+        for item in commandItems {
+            if let again = fresh.first(where: { $0.id == item.id }), again.size >= item.size / 2 {
+                stillThere.append(item)
+            }
+        }
+        return stillThere
     }
 
     // MARK: Suggestions

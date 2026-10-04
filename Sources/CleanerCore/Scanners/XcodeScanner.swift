@@ -243,23 +243,8 @@ public struct XcodeScanner: CleanupScanner {
         var items: [CleanupItem] = []
         let devices = SimulatorDevices.load()
 
-        let unavailable = devices.filter { !$0.isAvailable }
-        if !unavailable.isEmpty {
-            let folders = unavailable.map { context.path("Library/Developer/CoreSimulator/Devices/\($0.udid)") }
-            items.append(CleanupItem(
-                id: "xcode.simulators.unavailable",
-                title: "Unavailable simulators",
-                detail: "\(unavailable.count) simulators whose iOS version is no longer installed",
-                size: DirectorySize.allocatedSize(of: folders),
-                safety: .safe,
-                action: .command(executable: "/usr/bin/xcrun", arguments: ["simctl", "delete", "unavailable"]),
-                reason: "Their iOS runtime is no longer installed, so they can't run.",
-                cost: "Nothing: they can't be used anymore",
-                costLevel: nil,
-                afterCleaning: "Removed with `xcrun simctl delete unavailable`.",
-                revealURL: context.path("Library/Developer/CoreSimulator/Devices"),
-                blockers: [.simulator]
-            ))
+        if let item = Self.unavailableSimulatorsItem(devices, context: context) {
+            items.append(item)
         }
 
         for runtime in SimulatorRuntime.load() where runtime.deletable {
@@ -285,6 +270,30 @@ public struct XcodeScanner: CleanupScanner {
             ))
         }
         return items
+    }
+}
+
+extension XcodeScanner {
+    /// Deletes the unavailable simulators by ID. `simctl delete unavailable` isn't enough: it only removes
+    /// devices whose device type the current Xcode doesn't support, not ones whose runtime was removed.
+    static func unavailableSimulatorsItem(_ devices: [SimulatorDevice], context: ScanContext) -> CleanupItem? {
+        let unavailable = devices.filter { !$0.isAvailable }.sorted { $0.udid < $1.udid }
+        guard !unavailable.isEmpty else { return nil }
+        let folders = unavailable.map { context.path("Library/Developer/CoreSimulator/Devices/\($0.udid)") }
+        return CleanupItem(
+            id: "xcode.simulators.unavailable",
+            title: "Unavailable simulators",
+            detail: "\(unavailable.count) simulators whose iOS version is no longer installed",
+            size: DirectorySize.allocatedSize(of: folders),
+            safety: .safe,
+            action: .command(executable: "/usr/bin/xcrun", arguments: ["simctl", "delete"] + unavailable.map(\.udid)),
+            reason: "Their iOS runtime is no longer installed, so they can't run.",
+            cost: "Nothing: they can't be used anymore",
+            costLevel: nil,
+            afterCleaning: "Removed with `xcrun simctl delete` for each of these simulators.",
+            revealURL: context.path("Library/Developer/CoreSimulator/Devices"),
+            blockers: [.simulator]
+        )
     }
 }
 

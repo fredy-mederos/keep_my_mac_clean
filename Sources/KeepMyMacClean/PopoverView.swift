@@ -840,6 +840,14 @@ private struct FooterBar: View {
                     confirming
                 case .cleaning(let done, let total, let current):
                     cleaning(done: done, total: total, current: current)
+                case .verifying:
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.mini)
+                        Text("Checking that everything is gone…")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
                 case .finished(let freed, let trashed, _, let errors):
                     finished(freed: freed, trashed: trashed, errors: errors)
                 }
