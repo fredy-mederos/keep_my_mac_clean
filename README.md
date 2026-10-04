@@ -25,7 +25,7 @@ access to Documents, Desktop and Downloads.
 | Kind | Meaning | Examples |
 |---|---|---|
 | Safe | The owning tool recreates it. Cost: a slower next build or a re-download. | DerivedData, project build folders, Gradle build cache, npm/pnpm caches, unavailable simulators |
-| Review | Probably not needed, but worth a look. | iOS DeviceSupport, simulator runtimes, old Android Studio versions, Gradle dependencies, CocoaPods specs repo |
+| Review | Probably not needed, but worth a look. | iOS DeviceSupport, simulator runtimes, old Android Studio versions, Gradle dependencies, CocoaPods specs repo, older SDK platforms, unused Docker images and volumes |
 
 Folders are deleted permanently (moving gigabytes of caches to the Trash frees nothing). Where a tool
 has its own cleanup command, the app uses it (`xcrun simctl delete unavailable`, `xcrun simctl runtime delete`).
@@ -47,6 +47,6 @@ Project artifacts only count when the matching build file sits next to them: `bu
 ## Roadmap
 
 1. ✅ Menu bar free space, dev cleaners (safe + review), project discovery, low-space alert, open at login
-2. Stale projects (untouched for N days), Android SDK platforms, Docker
+2. ✅ One-click selection of inactive projects and DerivedData, older Android SDK platforms/sources/build tools, Docker (`docker system df` + prune)
 3. Big files, installers and Downloads finder; free-space history and "days until full"
 4. Treemap explorer, Full Disk Access view of hidden space (Trash, Photos, device backups)

@@ -64,6 +64,7 @@ public enum ScanEngine {
         AndroidScanner(),
         PackageCachesScanner(),
         IDEScanner(),
+        DockerScanner(),
     ]
 
     /// Items smaller than this are noise in the list.

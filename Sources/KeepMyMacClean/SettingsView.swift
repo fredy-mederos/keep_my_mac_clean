@@ -48,6 +48,14 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Cleaning") {
+                Picker("Treat projects as inactive after", selection: $model.settings.inactiveAfterMonths) {
+                    ForEach([1, 3, 6, 12], id: \.self) { months in
+                        Text(months == 1 ? "1 month" : "\(months) months").tag(months)
+                    }
+                }
+            }
+
             Section("Alerts") {
                 Toggle("Notify me when free space is low", isOn: $model.settings.notifyOnLowSpace)
                 Stepper("Alert below \(model.settings.lowSpaceThresholdGB) GB", value: $model.settings.lowSpaceThresholdGB, in: 5...200, step: 5)

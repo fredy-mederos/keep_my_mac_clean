@@ -180,6 +180,18 @@ final class AppModel {
         }
     }
 
+    var inactiveCutoff: Date {
+        Calendar.current.date(byAdding: .month, value: -settings.inactiveAfterMonths, to: Date()) ?? Date()
+    }
+
+    func inactiveItems(in category: CleanupCategory) -> [CleanupItem] {
+        category.inactiveItems(notUsedSince: inactiveCutoff)
+    }
+
+    func selectInactive(in category: CleanupCategory) {
+        selection.formUnion(inactiveItems(in: category).map(\.id))
+    }
+
     func selectAllSafe() {
         selection.formUnion(allItems.filter { $0.safety == .safe }.map(\.id))
     }

@@ -135,6 +135,29 @@ public struct AndroidScanner: CleanupScanner {
         return probes
     }
 
+    /// One review item with every version except the newest. Folder names like "35.0.1" or "android-36".
+    static func olderVersionsProbe(in folder: URL, label: String, note: String) -> ItemProbe? {
+        let versions = FileInfo.subdirectories(of: folder).sorted { Version.isOrderedBefore(sdkVersion($0), sdkVersion($1)) }
+        guard let newest = versions.last, versions.count > 1 else { return nil }
+        let older = Array(versions.dropLast())
+        let detail = "\(older.map(sdkVersion).joined(separator: ", ")) · keeps \(sdkVersion(newest))"
+        return .one { CleanupItem.folders(
+            id: "android.\(folder.lastPathComponent).older",
+            title: "Older \(label) (\(older.count) version\(older.count == 1 ? "" : "s"))",
+            detail: detail,
+            urls: older,
+            safety: .review,
+            note: note,
+            revealURL: folder,
+            blockers: [.androidStudio, .gradleDaemon]
+        ) }
+    }
+
+    /// "android-36" → "36", "35.0.1" → "35.0.1".
+    static func sdkVersion(_ url: URL) -> String {
+        url.lastPathComponent.replacingOccurrences(of: "android-", with: "")
+    }
+
     static func iniValue(_ key: String, in file: URL) -> String? {
         guard let text = try? String(contentsOf: file, encoding: .utf8) else { return nil }
         for line in text.split(whereSeparator: \.isNewline) {
@@ -188,22 +211,16 @@ public struct AndroidScanner: CleanupScanner {
             ) })
         }
 
-        let buildTools = FileInfo.subdirectories(of: sdk.appendingPathComponent("build-tools"))
-        let newestBuildTools = buildTools.map(\.lastPathComponent).max(by: Version.isOrderedBefore)
-        let olderBuildTools = buildTools
-            .filter { $0.lastPathComponent != newestBuildTools }
-            .sorted { Version.isOrderedBefore($0.lastPathComponent, $1.lastPathComponent) }
-        if !olderBuildTools.isEmpty {
-            probes.append(.one { CleanupItem.folders(
-                id: "android.build-tools.older",
-                title: "Older build tools (\(olderBuildTools.count) versions)",
-                detail: "\(olderBuildTools.map(\.lastPathComponent).joined(separator: ", ")) · keeps \(newestBuildTools ?? "")",
-                urls: olderBuildTools,
-                safety: .review,
-                note: "The Android Gradle plugin downloads a specific version again if a project asks for it.",
-                revealURL: sdk.appendingPathComponent("build-tools"),
-                blockers: [.androidStudio, .gradleDaemon]
-            ) })
+        // Small per version, so older versions are grouped into one item each.
+        let grouped: [(folder: String, label: String, note: String)] = [
+            ("build-tools", "build tools", "The Android Gradle plugin downloads a specific version again if a project asks for it."),
+            ("platforms", "SDK platforms", "Projects compiling against an older API level download it again through the SDK Manager or Gradle."),
+            ("sources", "SDK sources", "Only used to browse Android sources in the IDE. Download again from the SDK Manager."),
+        ]
+        for group in grouped {
+            if let probe = Self.olderVersionsProbe(in: sdk.appendingPathComponent(group.folder), label: group.label, note: group.note) {
+                probes.append(probe)
+            }
         }
         return probes
     }

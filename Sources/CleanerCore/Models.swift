@@ -98,4 +98,12 @@ public struct CleanupCategory: Identifiable, Sendable {
     public func size(of safety: Safety) -> Int64 {
         items.filter { $0.safety == safety }.reduce(0) { $0 + $1.size }
     }
+
+    /// Safe items not used since `date`, e.g. build folders of projects untouched for months.
+    public func inactiveItems(notUsedSince date: Date) -> [CleanupItem] {
+        items.filter { item in
+            guard item.safety == .safe, let lastUsed = item.lastUsed else { return false }
+            return lastUsed < date
+        }
+    }
 }

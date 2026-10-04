@@ -179,12 +179,39 @@ private struct CategorySection: View {
             }
 
             if isExpanded {
+                InactiveRow(category: category)
                 ForEach(category.items) { item in
                     ItemRow(item: item)
                 }
                 .padding(.bottom, 4)
             }
             Divider().padding(.leading, 14)
+        }
+    }
+}
+
+/// "5 not used in 3+ months · 6.2 GB  [Select]" for projects and DerivedData you haven't touched.
+private struct InactiveRow: View {
+    @Environment(AppModel.self) private var model
+    let category: CleanupCategory
+
+    var body: some View {
+        let inactive = model.inactiveItems(in: category)
+        if !inactive.isEmpty {
+            let size = inactive.reduce(Int64(0)) { $0 + $1.size }
+            let months = model.settings.inactiveAfterMonths
+            HStack(spacing: 6) {
+                Image(systemName: "moon.zzz")
+                Text("\(inactive.count) not used in \(months)+ month\(months == 1 ? "" : "s") · \(ByteFormat.standard(size))")
+                Spacer()
+                Button("Select them") { model.selectInactive(in: category) }
+                    .buttonStyle(.link)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.leading, 34)
+            .padding(.trailing, 14)
+            .padding(.vertical, 4)
         }
     }
 }

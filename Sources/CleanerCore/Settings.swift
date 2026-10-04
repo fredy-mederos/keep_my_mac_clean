@@ -6,6 +6,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var hasDiscoveredProjects = false
     public var notifyOnLowSpace = true
     public var lowSpaceThresholdGB = 20
+    /// Projects (and their DerivedData) unused for this long can be selected in one click.
+    public var inactiveAfterMonths = 3
 
     public init() {}
 
@@ -17,6 +19,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         hasDiscoveredProjects = try container.decodeIfPresent(Bool.self, forKey: .hasDiscoveredProjects) ?? defaults.hasDiscoveredProjects
         notifyOnLowSpace = try container.decodeIfPresent(Bool.self, forKey: .notifyOnLowSpace) ?? defaults.notifyOnLowSpace
         lowSpaceThresholdGB = try container.decodeIfPresent(Int.self, forKey: .lowSpaceThresholdGB) ?? defaults.lowSpaceThresholdGB
+        inactiveAfterMonths = try container.decodeIfPresent(Int.self, forKey: .inactiveAfterMonths) ?? defaults.inactiveAfterMonths
     }
 
     public var lowSpaceThresholdBytes: Int64 { Int64(lowSpaceThresholdGB) * 1_000_000_000 }
