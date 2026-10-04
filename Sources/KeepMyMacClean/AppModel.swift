@@ -9,16 +9,24 @@ final class AppModel {
         case idle
         case confirming
         case cleaning(done: Int, total: Int, current: String)
-        case finished(freed: Int64, cleaned: Int, errors: [String])
+        case finished(freed: Int64, trashed: Int64, cleaned: Int, errors: [String])
+    }
+
+    enum SpaceStatus {
+        case good, tight, low
     }
 
     private(set) var disk: DiskSpace?
     private(set) var categories: [CleanupCategory] = []
     private(set) var isScanning = false
+    private(set) var pendingMeasurements = 0
     private(set) var scanStatus: String?
     private(set) var lastScan: Date?
+    private(set) var history: SpaceHistory
     var selection: Set<String> = []
     var expanded: Set<String> = []
+    /// Show only one kind of item (safe, review, your files). Nil shows everything.
+    var filter: Safety?
     var phase: CleanPhase = .idle
     private(set) var runningBlockers: [Blocker] = []
 
@@ -30,11 +38,16 @@ final class AppModel {
     }
 
     private let store = SettingsStore()
+    private let historyStore = HistoryStore()
     private let home = FileManager.default.homeDirectoryForCurrentUser
     private var lowSpaceAlertSent = false
 
+    /// Scans again in the background this often, so category growth can be tracked.
+    private let autoRescanInterval: TimeInterval = 6 * 3600
+
     init() {
         settings = store.load()
+        history = historyStore.load()
         Task { await start() }
     }
 
@@ -49,6 +62,9 @@ final class AppModel {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
                 refreshDisk()
+                if let lastScan, Date().timeIntervalSince(lastScan) > autoRescanInterval, phase == .idle {
+                    await rescan()
+                }
             }
         }
         if !settings.hasDiscoveredProjects {
@@ -63,15 +79,27 @@ final class AppModel {
         disk.map { ByteFormat.short($0.available) } ?? "–"
     }
 
-    var isLowOnSpace: Bool {
-        guard let disk else { return false }
-        return disk.available < settings.lowSpaceThresholdBytes
+    var isLowOnSpace: Bool { spaceStatus == .low }
+
+    var spaceStatus: SpaceStatus {
+        guard let disk else { return .good }
+        let threshold = settings.lowSpaceThresholdBytes
+        if disk.available < threshold { return .low }
+        if disk.available < threshold * 2 { return .tight }
+        return .good
     }
+
+    var trend: SpaceTrend? { history.trend() }
+    var recentSamples: [SpaceSample] { history.recentSamples() }
 
     func refreshDisk() {
         guard let latest = try? DiskSpace.read() else { return }
         disk = latest
+        if history.record(SpaceSample(date: Date(), available: latest.available, total: latest.total)) {
+            saveHistory()
+        }
         checkLowSpace(latest)
+        checkFillingFast()
     }
 
     private func checkLowSpace(_ disk: DiskSpace) {
@@ -88,6 +116,22 @@ final class AppModel {
             // Re-arm only after a clear recovery so the alert doesn't flap around the threshold.
             lowSpaceAlertSent = false
         }
+    }
+
+    /// Warns at most every 3 days when the current pace fills the disk within a week.
+    private func checkFillingFast() {
+        guard settings.notifyOnLowSpace, let days = trend?.daysUntilFull, days < 7 else { return }
+        if let last = history.lastFillingAlert, Date().timeIntervalSince(last) < 3 * 86_400 { return }
+        Notifier.post(
+            title: "Your disk is filling up fast",
+            body: "At this pace it's full in about \(max(Int(days), 1)) days. Open KeepMyMacClean to see what's growing."
+        )
+        history.lastFillingAlert = Date()
+        saveHistory()
+    }
+
+    private func saveHistory() {
+        try? historyStore.save(history)
     }
 
     // MARK: Projects
@@ -127,28 +171,36 @@ final class AppModel {
         scanStatus = "Scanning…"
         defer {
             isScanning = false
+            pendingMeasurements = 0
             scanStatus = nil
         }
-        let context = ScanContext(home: home, projectLocations: projectLocations)
-        let order = ScanEngine.scanners.map(\.categoryID)
-        var results: [String: CleanupCategory] = [:]
-
-        await withTaskGroup(of: CleanupCategory.self) { group in
-            for scanner in ScanEngine.scanners {
-                group.addTask(priority: .utility) {
-                    ScanEngine.scan(scanner, context: context)
-                }
-            }
-            for await category in group {
-                results[category.id] = category
-                categories = order.compactMap { results[$0] }.filter { !$0.items.isEmpty }
-            }
+        let context = ScanContext(
+            home: home,
+            projectLocations: projectLocations,
+            largeFileMinimumSize: settings.largeFileThresholdBytes
+        )
+        for await snapshot in ScanEngine.run(context: context) {
+            categories = snapshot.categories
+            pendingMeasurements = snapshot.pending
         }
 
-        let ids = Set(allItems.map(\.id))
-        selection.formIntersection(ids)
+        selection.formIntersection(Set(allItems.map(\.id)))
         lastScan = Date()
+        history.record(scan: ScanRecord(
+            date: Date(),
+            categorySizes: Dictionary(uniqueKeysWithValues: categories.map { ($0.id, $0.totalSize) })
+        ))
+        saveHistory()
         refreshDisk()
+    }
+
+    /// Growth of a category over about a week, when it's big enough to mention.
+    func growth(ofCategory id: String) -> CategoryGrowth? {
+        guard let category = categories.first(where: { $0.id == id }),
+              let growth = history.growth(of: id, currentSize: category.totalSize),
+              growth.bytes >= 500_000_000
+        else { return nil }
+        return growth
     }
 
     // MARK: Selection
@@ -157,8 +209,22 @@ final class AppModel {
     var selectedItems: [CleanupItem] { allItems.filter { selection.contains($0.id) } }
     var selectedSize: Int64 { selectedItems.reduce(0) { $0 + $1.size } }
 
+    /// Categories as shown, after applying the filter.
+    var visibleCategories: [CleanupCategory] {
+        guard let filter else { return categories }
+        return categories.compactMap { category in
+            var filtered = category
+            filtered.items = category.items.filter { $0.safety == filter }
+            return filtered.items.isEmpty ? nil : filtered
+        }
+    }
+
     func total(_ safety: Safety) -> Int64 {
         categories.reduce(0) { $0 + $1.size(of: safety) }
+    }
+
+    func toggleFilter(_ safety: Safety) {
+        filter = filter == safety ? nil : safety
     }
 
     func toggle(_ item: CleanupItem) {
@@ -219,6 +285,7 @@ final class AppModel {
         var errors: [String] = []
         var cleanedIDs = Set<String>()
         var freed: Int64 = 0
+        var trashed: Int64 = 0
 
         for (index, item) in items.enumerated() {
             phase = .cleaning(done: index, total: items.count, current: item.title)
@@ -227,7 +294,7 @@ final class AppModel {
                 errors.append("\(item.title): \(error)")
             } else {
                 cleanedIDs.insert(item.id)
-                freed += item.size
+                if item.action.movesToTrash { trashed += item.size } else { freed += item.size }
             }
         }
 
@@ -237,7 +304,7 @@ final class AppModel {
         categories.removeAll { $0.items.isEmpty }
         selection.subtract(cleanedIDs)
         refreshDisk()
-        phase = .finished(freed: freed, cleaned: cleanedIDs.count, errors: errors)
+        phase = .finished(freed: freed, trashed: trashed, cleaned: cleanedIDs.count, errors: errors)
     }
 
     // MARK: Misc

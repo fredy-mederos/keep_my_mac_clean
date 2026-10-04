@@ -54,6 +54,14 @@ struct SettingsView: View {
                         Text(months == 1 ? "1 month" : "\(months) months").tag(months)
                     }
                 }
+                Picker("List my files larger than", selection: $model.settings.largeFileThresholdMB) {
+                    ForEach([100, 250, 500, 1000, 2000], id: \.self) { megabytes in
+                        Text(ByteFormat.short(Int64(megabytes) * 1_000_000)).tag(megabytes)
+                    }
+                }
+                .onChange(of: model.settings.largeFileThresholdMB) {
+                    Task { await model.rescan() }
+                }
             }
 
             Section("Alerts") {
