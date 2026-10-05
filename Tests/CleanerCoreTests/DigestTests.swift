@@ -27,7 +27,7 @@ import Testing
         ))
         let categories = [
             CleanupCategory(id: "xcode", title: "Xcode and simulators", symbol: "", items: [
-                item("dd", "Auto1 build data", 15_800_000_000), item("runtime", "iOS 18.6 runtime", 9 * gb), item("rest", "Other", 21_300_000_000),
+                item("dd", "Acme build data", 15_800_000_000), item("runtime", "iOS 18.6 runtime", 9 * gb), item("rest", "Other", 21_300_000_000),
             ]),
             CleanupCategory(id: "files", title: "Large files and downloads", symbol: "", items: [item("apk", "app.apk", 2_200_000_000)]),
             CleanupCategory(id: "packages", title: "Package manager caches", symbol: "", items: [item("npm", "npm cache", 14_050_000_000)]),
@@ -42,7 +42,7 @@ import Testing
         #expect(facts.periodLabel == "this week")
         #expect(abs(Double(facts.cleaned) - 19.675e9) < 0.01e9)          // 20 GB jump minus that interval's loss
         #expect(facts.changes.map(\.id) == ["xcode", "files"])           // packages changed < 100 MB
-        #expect(facts.changes.first?.topItem?.title == "Auto1 build data")
+        #expect(facts.changes.first?.topItem?.title == "Acme build data")
         #expect(facts.biggestGrower?.id == "dd")
         #expect(facts.biggestGrower?.bytes == 5_800_000_000)
     }
@@ -52,7 +52,7 @@ import Testing
         let facts = try #require(Digest.facts(history: history, categories: categories, now: now))
         let summary = Digest.plainSummary(facts)
         #expect(summary.headline == "Free space up 11 GB this week")
-        #expect(summary.body.hasPrefix("Xcode and simulators grew 5.8 GB, mostly Auto1 build data. Large files and downloads grew 1.2 GB, mostly app.apk."))
+        #expect(summary.body.hasPrefix("Xcode and simulators grew 5.8 GB, mostly Acme build data. Large files and downloads grew 1.2 GB, mostly app.apk."))
         #expect(summary.body.contains("You cleaned up 20 GB."))
     }
 

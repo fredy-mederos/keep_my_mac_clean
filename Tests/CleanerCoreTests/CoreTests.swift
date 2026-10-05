@@ -58,7 +58,7 @@ import Testing
 @Suite struct ProjectDiscoveryTests {
     @Test func findsProjectsAndRemembersTheirLocations() throws {
         let home = try TestHome()
-        try home.file("Documents/projects/auto1/android-app/settings.gradle.kts")
+        try home.file("Documents/projects/work/android-app/settings.gradle.kts")
         try home.file("Documents/projects/web-tool/package.json")
         try home.file("AndroidStudioProjects/vivecars/build.gradle")
         try home.file("solo/Package.swift")
@@ -161,21 +161,21 @@ import Testing
     }
 
     @Test func namesDerivedDataFolders() {
-        #expect(XcodeScanner.projectName(fromDerivedDataFolder: "Auto1-bzdndobdkrngxicisfqqxbehazjk") == "Auto1")
+        #expect(XcodeScanner.projectName(fromDerivedDataFolder: "Acme-bzdndobdkrngxicisfqqxbehazjk") == "Acme")
         #expect(XcodeScanner.projectName(fromDerivedDataFolder: "My-App") == "My-App")
     }
 
     @Test func scansDerivedDataWithWorkspaceNames() throws {
         let home = try TestHome()
         let dd = "Library/Developer/Xcode/DerivedData"
-        try home.file("\(dd)/Auto1-bzdndobdkrngxicisfqqxbehazjk/Build/x.o", bytes: 2_000_000)
-        let plist = try PropertyListSerialization.data(fromPropertyList: ["WorkspacePath": "/gone/Auto1.xcworkspace"], format: .xml, options: 0)
-        try plist.write(to: home.path("\(dd)/Auto1-bzdndobdkrngxicisfqqxbehazjk/info.plist"))
+        try home.file("\(dd)/Acme-bzdndobdkrngxicisfqqxbehazjk/Build/x.o", bytes: 2_000_000)
+        let plist = try PropertyListSerialization.data(fromPropertyList: ["WorkspacePath": "/gone/Acme.xcworkspace"], format: .xml, options: 0)
+        try plist.write(to: home.path("\(dd)/Acme-bzdndobdkrngxicisfqqxbehazjk/info.plist"))
         try home.file("\(dd)/ModuleCache.noindex/m.pcm", bytes: 2_000_000)
 
         let context = ScanContext(home: home.url, projectLocations: [], runsSystemCommands: false)
         let titles = ScanEngine.scan(XcodeScanner(), context: context).items.map(\.title)
-        #expect(Set(titles) == ["Auto1 build data", "Shared module caches"])
+        #expect(Set(titles) == ["Acme build data", "Shared module caches"])
     }
 
     @Test func parsesSimulatorJSON() {

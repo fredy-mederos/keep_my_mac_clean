@@ -96,7 +96,7 @@ A full scan runs every 6 hours; categories that grew more than 500 MB in about a
 A notification fires when free space drops below your threshold, or when the current pace fills the disk within a week.
 
 Once there are 2 days of history, the popover shows a summary card ("Free space down 9 GB this week. Xcode and
-simulators grew 6.1 GB, mostly Auto1 build data…") with a shortcut that selects the item that grew the most. With
+simulators grew 6.1 GB, mostly Acme build data…") with a shortcut that selects the item that grew the most. With
 a full week of history it's also sent as a weekly notification (Settings → Alerts). `swift run kmmc digest`
 prints it; `--sample` shows a made-up week.
 

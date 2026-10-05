@@ -152,7 +152,7 @@ func sampleWeek() -> (SpaceHistory, [CleanupCategory]) {
     }
     return (history, [
         CleanupCategory(id: "xcode", title: "Xcode and simulators", symbol: "", items: [
-            item("dd", "Auto1 build data", 15_800_000_000), item("rest", "Other", 30_300_000_000),
+            item("dd", "Acme build data", 15_800_000_000), item("rest", "Other", 30_300_000_000),
         ]),
         CleanupCategory(id: "files", title: "Large files and downloads", symbol: "", items: [item("apk", "app.apk", 2_200_000_000)]),
     ])

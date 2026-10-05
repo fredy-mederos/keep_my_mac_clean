@@ -64,7 +64,7 @@ public enum ProjectDiscovery {
 
     /// Turns project paths into the folders worth remembering.
     ///
-    /// A project's location is its ancestor two levels below home (`~/Documents/projects/auto1/app` →
+    /// A project's location is its ancestor two levels below home (`~/Documents/projects/work/app` →
     /// `~/Documents/projects`), or its parent if it is shallower. Projects sitting directly in home are
     /// their own location. Nested locations collapse into their ancestor.
     public static func locations(for projects: [URL], home: URL) -> [URL] {

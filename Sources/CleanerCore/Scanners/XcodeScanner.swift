@@ -102,7 +102,7 @@ public struct XcodeScanner: CleanupScanner {
         return probes
     }
 
-    /// "Auto1-bzdndobdkrngxicisfqqxbehazjk" → "Auto1".
+    /// "Acme-bzdndobdkrngxicisfqqxbehazjk" → "Acme".
     static func projectName(fromDerivedDataFolder name: String) -> String {
         guard let dash = name.lastIndex(of: "-") else { return name }
         let suffix = name[name.index(after: dash)...]
