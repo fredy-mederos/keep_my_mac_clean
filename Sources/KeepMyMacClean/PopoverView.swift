@@ -69,16 +69,23 @@ private struct HeaderView: View {
             UsageRing(fraction: model.disk?.usedFraction ?? 0, tint: model.spaceStatus.tint)
                 .frame(width: 56, height: 56)
 
+            // The buttons sit beside the big number only, so the lines below get the full width.
             VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text(model.menuBarText)
-                        .font(.system(size: 26, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(model.isLowOnSpace ? Palette.red : Color.primary)
-                        .contentTransition(.numericText())
-                    Text("free")
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(Palette.secondaryText)
+                HStack(alignment: .center, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(model.menuBarText)
+                            .font(.system(size: 26, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(model.isLowOnSpace ? Palette.red : Color.primary)
+                            .contentTransition(.numericText())
+                        Text("free")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(Palette.secondaryText)
+                    }
+                    .lineLimit(1)
+                    Spacer(minLength: 0)
+                    buttons
+                        .offset(x: 6)
                 }
                 Text(statusLine)
                     .font(.caption)
@@ -86,29 +93,28 @@ private struct HeaderView: View {
                 TrendLine()
                     .padding(.top, 2)
             }
+        }
+    }
 
-            Spacer(minLength: 0)
-
-            HStack(spacing: 0) {
-                if model.isScanning {
-                    ProgressView()
-                        .controlSize(.mini)
-                        .frame(width: 26, height: 26)
-                        .help("Scanning…")
-                } else {
-                    IconButton(symbol: "arrow.clockwise", help: "Scan again") {
-                        Task { await model.rescan() }
-                    }
-                }
-                IconButton(symbol: "gearshape", help: "Settings") {
-                    NSApp.activate()
-                    openSettings()
-                }
-                IconButton(symbol: "power", help: "Quit KeepMyMacClean") {
-                    NSApp.terminate(nil)
+    private var buttons: some View {
+        HStack(spacing: 0) {
+            if model.isScanning {
+                ProgressView()
+                    .controlSize(.mini)
+                    .frame(width: 26, height: 26)
+                    .help("Scanning…")
+            } else {
+                IconButton(symbol: "arrow.clockwise", help: "Scan again") {
+                    Task { await model.rescan() }
                 }
             }
-            .offset(x: 6, y: -4)
+            IconButton(symbol: "gearshape", help: "Settings") {
+                NSApp.activate()
+                openSettings()
+            }
+            IconButton(symbol: "power", help: "Quit KeepMyMacClean") {
+                NSApp.terminate(nil)
+            }
         }
     }
 
@@ -168,6 +174,7 @@ private struct TrendLine: View {
                 Text(text(trend))
                     .foregroundStyle(tint ?? Palette.secondaryText)
                     .lineLimit(1)
+                    .layoutPriority(1)
                 if model.recentSamples.count >= 2 {
                     Sparkline(samples: model.recentSamples, tint: tint ?? .accentColor)
                         .frame(width: 54, height: 14)
