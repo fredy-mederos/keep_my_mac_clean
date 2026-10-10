@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import ServiceManagement
 import UserNotifications
@@ -5,27 +6,6 @@ import UserNotifications
 /// Notifications and login items only work from a real .app bundle, not from `swift run`.
 private var isBundledApp: Bool {
     Bundle.main.bundleIdentifier != nil && Bundle.main.bundleURL.pathExtension == "app"
-}
-
-/// Version details stamped into Info.plist by scripts/build-app.sh.
-enum AppVersion {
-    private static var info: [String: Any] { Bundle.main.infoDictionary ?? [:] }
-
-    static var isStamped: Bool { info["KMMCGitCommit"] != nil }
-    static var version: String { info["CFBundleShortVersionString"] as? String ?? "dev" }
-    /// Number of commits in the build's history.
-    static var build: String { info["CFBundleVersion"] as? String ?? "0" }
-    /// Short commit hash, with "-dirty" when built with uncommitted changes.
-    static var commit: String? { info["KMMCGitCommit"] as? String }
-    static var buildDate: Date? {
-        (info["KMMCBuildDate"] as? String).flatMap { try? Date($0, strategy: .iso8601) }
-    }
-
-    /// "Version 0.4 (build 9 · fee5ec6)", or "Development build" when run with `swift run`.
-    static var summary: String {
-        guard isStamped, let commit else { return "Development build" }
-        return "Version \(version) (build \(build) · \(commit))"
-    }
 }
 
 enum Notifier {
@@ -60,3 +40,28 @@ enum LoginItem {
         }
     }
 }
+
+#if DEBUG
+/// Debug builds: `-OpenMenuBarWindow YES` opens the menu bar window at launch, as clicking the menu bar item
+/// does, so it can be checked and captured without a click.
+@MainActor
+enum MenuBarWindow {
+    static func openIfAsked() {
+        guard UserDefaults.standard.bool(forKey: "OpenMenuBarWindow") else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            for window in NSApp.windows where window.className.contains("StatusBarWindow") {
+                if let button = window.contentView.flatMap(statusButton(in:)) {
+                    button.performClick(nil)
+                    return
+                }
+            }
+        }
+    }
+
+    private static func statusButton(in view: NSView) -> NSStatusBarButton? {
+        if let button = view as? NSStatusBarButton { return button }
+        return view.subviews.lazy.compactMap(statusButton(in:)).first
+    }
+}
+#endif

@@ -63,6 +63,10 @@ final class AppModel {
         // No Dock icon, also when started with `swift run` (the bundled app sets LSUIElement).
         NSApp.setActivationPolicy(.accessory)
         Notifier.requestAuthorization()
+        AppUpdater.shared.start()
+        #if DEBUG
+        MenuBarWindow.openIfAsked()
+        #endif
         refreshDisk()
         Task {
             while !Task.isCancelled {

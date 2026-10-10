@@ -5,9 +5,12 @@ cd "$(dirname "$0")/.."
 
 CONFIG="${CONFIG:-release}"
 APP="dist/KeepMyMacClean.app"
+# ARCHS="arm64 x86_64" builds a universal app (scripts/create_dmg.sh does, for releases); by default, for this Mac.
+BUILD_ARGS=(-c "$CONFIG")
+for arch in ${ARCHS:-}; do BUILD_ARGS+=(--arch "$arch"); done
 
-swift build -c "$CONFIG" --product KeepMyMacClean
-BIN_DIR="$(swift build -c "$CONFIG" --show-bin-path)"
+swift build "${BUILD_ARGS[@]}" --product KeepMyMacClean
+BIN_DIR="$(swift build "${BUILD_ARGS[@]}" --show-bin-path)"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -15,11 +18,12 @@ cp "$BIN_DIR/KeepMyMacClean" "$APP/Contents/MacOS/KeepMyMacClean"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"   # regenerate with: swift scripts/make-icon.swift
 
-# Stamp the build: build number = commit count, plus the commit and build date (shown in Settings → About).
+# Stamp the build: build number = commit count, plus the commit ("+" when built with uncommitted changes) and
+# build date (shown in Settings → About).
 PLIST="$APP/Contents/Info.plist"
 BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 0)"
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then COMMIT="$COMMIT-dirty"; fi
+if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then COMMIT="$COMMIT+"; fi
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$PLIST"
 /usr/libexec/PlistBuddy -c "Add :KMMCGitCommit string $COMMIT" "$PLIST"
 /usr/libexec/PlistBuddy -c "Add :KMMCBuildDate string $(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PLIST"

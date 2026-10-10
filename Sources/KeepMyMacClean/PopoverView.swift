@@ -863,6 +863,8 @@ private struct FooterBar: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .transition(.opacity)
+            Divider()
+            UpdateLine()
         }
         .background(Color.primary.opacity(0.035))
     }
@@ -1044,6 +1046,53 @@ private struct FooterBar: View {
             Button("Done") { model.phase = .idle }
                 .secondaryActionStyle()
                 .keyboardShortcut(.defaultAction)
+        }
+    }
+}
+
+// MARK: - Version and updates
+
+/// "Version 0.4.0" and Check for Updates, which turns into a green Update Available when GitHub has a newer
+/// version (found at launch, once a day, or when clicked).
+private struct UpdateLine: View {
+    private let updater = AppUpdater.shared
+    /// Shows "Up to Date" or "Couldn't Check" for a few seconds after a check you asked for.
+    @State private var showsResult = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("Version \(BuildInfo.version)")
+                .foregroundStyle(Palette.secondaryText)
+            Spacer()
+            if let release = updater.available {
+                Button("Update Available: \(release.version)") { updater.download(release) }
+                    .foregroundStyle(Palette.green)
+                    .help("Download KeepMyMacClean \(release.version) from GitHub")
+            } else {
+                Button(label, action: check)
+                    .foregroundStyle(Palette.secondaryText)
+                    .disabled(updater.isChecking)
+                    .help(showsResult ? updater.failure ?? "This is the newest version" : "Ask GitHub for a newer version")
+            }
+        }
+        .font(.caption)
+        .buttonStyle(.plain)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+    }
+
+    private var label: String {
+        if updater.isChecking { return "Checking…" }
+        if showsResult { return updater.failure == nil ? "Up to Date" : "Couldn't Check" }
+        return "Check for Updates"
+    }
+
+    private func check() {
+        Task {
+            await updater.check()
+            showsResult = true
+            try? await Task.sleep(for: .seconds(3))
+            showsResult = false
         }
     }
 }

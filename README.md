@@ -1,11 +1,28 @@
 # KeepMyMacClean
 
+[![Latest release](https://img.shields.io/github/v/release/fredy-mederos/keep_my_mac_clean)](https://github.com/fredy-mederos/keep_my_mac_clean/releases/latest)
+
 A small menu bar app that shows how much disk space is left, how fast it's shrinking, and lets
 you pick developer junk to clean: Xcode DerivedData, Gradle caches, project `build/` and
 `node_modules/` folders, old simulator runtimes, old IDE versions, package manager caches, Docker
 data, plus your own large files and forgotten downloads.
 
 Cleaning is always manual: nothing is deleted until you select it and confirm.
+
+<p align="center">
+  <img src="screenshots/keepmymacclean.png" alt="KeepMyMacClean's menu bar window: free space, what can be cleaned by category, and the projects' build folders" width="400" />
+</p>
+
+## Download
+
+**[Download KeepMyMacClean.dmg](https://github.com/fredy-mederos/keep_my_mac_clean/releases/latest/download/KeepMyMacClean.dmg)**
+(the latest release, for macOS 14 or later on Apple silicon and Intel), open it and drag
+KeepMyMacClean into Applications. Every version is on the
+[releases page](https://github.com/fredy-mederos/keep_my_mac_clean/releases).
+
+It tells you when there's a new version: the bottom of the menu bar window shows the version and Check
+for Updates, which turns into a green Update Available when GitHub has a newer release (it asks when
+the app starts and once a day). Settings → Updates shows the same, with Download.
 
 ## Build and run
 
@@ -23,9 +40,32 @@ swift run kmmc projects            # read-only: stack, description and git activ
 The app icon is drawn in code: `swift scripts/make-icon.swift` writes `Resources/AppIcon.icns` (and a 1024 px
 PNG preview), which `build-app.sh` copies into the bundle.
 
-`build-app.sh` stamps each build: the version in `Resources/Info.plist` (bumped by hand for milestones), the
-build number (commit count), the short commit hash (`-dirty` when built with uncommitted changes) and the build
-date. Settings → About shows them.
+`build-app.sh` stamps each build: the version in `Resources/Info.plist` (`scripts/version.sh` prints or sets it),
+the build number (commit count), the short commit hash (`+` when built with uncommitted changes) and the build
+date. Settings → About shows them, the same rows as GitTree and Vibe Notepad.
+
+Debug builds check for updates only when asked. `-CheckForUpdates YES` checks at launch as the released app does,
+`-UpdateRepository owner/name` tries another repository's releases (one with a newer version shows Update
+Available), and `-OpenMenuBarWindow YES` opens the menu bar window at launch:
+
+```bash
+CONFIG=debug scripts/build-app.sh
+open -n dist/KeepMyMacClean.app --args -UpdateRepository fredy-mederos/devwispr -OpenMenuBarWindow YES
+```
+
+## Releasing
+
+`scripts/release.sh` builds the app for Apple silicon and Intel, signs it with a Developer ID (with the hardened
+runtime), packs it into `dist/KeepMyMacClean.dmg`, has Apple notarize it and staples the ticket:
+
+```bash
+APP_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+  NOTARY_KEYCHAIN_PROFILE=<profile> scripts/release.sh
+```
+
+The `release-keepmymacclean` skill (`skills/`, linked for Claude Code and Codex) runs a whole release: it picks and
+confirms the version, builds the disk image, tags `vX.Y.Z` and publishes the GitHub release with notes from
+`scripts/release-notes.sh`. Installed copies find it within a day.
 
 On first launch the app walks your home folder for projects and remembers their parent folders
 (`~/Documents/projects`, `~/AndroidStudioProjects`...). Edit them in Settings. macOS asks once for
@@ -108,9 +148,11 @@ accurately but kept dropping the most useful details (which item grew, the pace,
 - `Sources/CleanerCore`: scanning, sizing, project discovery, cleaning. No UI.
   - `Scanners/`: one scanner per category. Scanners list items quickly and return probes; `ScanEngine`
     measures probes in parallel and streams results.
-- `Sources/KeepMyMacClean`: SwiftUI `MenuBarExtra` app.
+- `Sources/KeepMyMacClean`: SwiftUI `MenuBarExtra` app, with its version info and update checks
+  (`UpdateCheck.swift` is the same file in GitTree and Vibe Notepad).
 - `Sources/kmmc`: read-only CLI.
 - `Tests/CleanerCoreTests`: Swift Testing suite.
+- `Tests/KeepMyMacCleanTests`: the update check's version comparison and GitHub parsing.
 
 ## Roadmap
 

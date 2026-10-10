@@ -16,5 +16,7 @@ let package = Package(
         // Read-only CLI to inspect what the app would find (handy while developing).
         .executableTarget(name: "kmmc", dependencies: ["CleanerCore"]),
         .testTarget(name: "CleanerCoreTests", dependencies: ["CleanerCore"]),
+        // The app's own logic that doesn't touch the disk, like checking GitHub for updates.
+        .testTarget(name: "KeepMyMacCleanTests", dependencies: ["KeepMyMacClean"]),
     ]
 )

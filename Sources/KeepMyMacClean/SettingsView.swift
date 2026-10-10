@@ -104,16 +104,8 @@ struct SettingsView: View {
                 }
             }
 
-            Section("About") {
-                LabeledContent("KeepMyMacClean") {
-                    Text(AppVersion.summary)
-                        .textSelection(.enabled)
-                }
-                if let date = AppVersion.buildDate {
-                    LabeledContent("Built", value: date.formatted(date: .abbreviated, time: .shortened))
-                }
-                Link("Source on GitHub", destination: URL(string: "https://github.com/fredy-mederos/keep_my_mac_clean")!)
-            }
+            AboutSection()
+            UpdatesSection()
         }
         .formStyle(.grouped)
         .frame(width: 480, height: 620)
