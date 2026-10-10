@@ -1,6 +1,6 @@
 <img src="Resources/AppIcon-1024.png" width="80" alt="Vibe Clean icon" align="left" style="margin-right:16px" />
 
-[![Latest release](https://img.shields.io/github/v/release/fredy-mederos/vibe_clean)](https://github.com/fredy-mederos/vibe_clean/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)<br>[![Latest release](https://img.shields.io/github/v/release/fredy-mederos/vibe_clean)](https://github.com/fredy-mederos/vibe_clean/releases/latest)
 
 <br clear="left"/>
 
@@ -171,3 +171,7 @@ accurately but kept dropping the most useful details (which item grew, the pace,
 6. ✅ Project one-liners: stack, description and git activity, condensed on-device when long or not in English
 7. Explaining unknown big folders (curated list + optional cloud model)
 8. Treemap explorer, Full Disk Access view of hidden space (Trash, Photos, device backups)
+
+## License
+
+MIT, see [LICENSE](LICENSE).
