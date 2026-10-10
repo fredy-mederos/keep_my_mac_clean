@@ -1,4 +1,0 @@
-interface:
-  display_name: "Release KeepMyMacClean"
-  short_description: "Run the KeepMyMacClean release pipeline"
-  default_prompt: "Execute the KeepMyMacClean release workflow end-to-end: resolve the version, confirm it, build a signed and notarized DMG, tag it, and publish the GitHub release."

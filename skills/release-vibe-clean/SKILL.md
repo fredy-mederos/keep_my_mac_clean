@@ -1,15 +1,16 @@
 ---
-name: release-keepmymacclean
-description: "Publish a KeepMyMacClean release end-to-end: check the repository, resolve and confirm the version, build a signed and notarized KeepMyMacClean.dmg, tag it and publish a GitHub release with the DMG. Use when asked to release or publish KeepMyMacClean, cut a new version, or upload a DMG to GitHub. Not for `scripts/build-app.sh --install`, which only installs a local build."
+name: release-vibe-clean
+description: "Publish a Vibe Clean release end-to-end: check the repository, resolve and confirm the version, build a signed and notarized VibeClean.dmg, tag it and publish a GitHub release with the DMG. Use when asked to release or publish Vibe Clean (formerly KeepMyMacClean), cut a new version, or upload a DMG to GitHub. Not for `scripts/build-app.sh --install`, which only installs a local build."
 ---
 
-# Release KeepMyMacClean
+# Release Vibe Clean
 
 ## Overview
 
-Run these steps in order. Installed copies of KeepMyMacClean ask GitHub for the newest release
+Run these steps in order. Installed copies of Vibe Clean ask GitHub for the newest release
 (`Sources/KeepMyMacClean/AppUpdater.swift`) at launch and once a day, so a published release reaches them within a
-day. They compare the release tag (`vX.Y.Z`) with their own version and download the attached `KeepMyMacClean.dmg`.
+day. They compare the release tag (`vX.Y.Z`) with their own version and download the attached `VibeClean.dmg` (copies from
+before the rename, 1.1.0, ask for the old repository name, which GitHub redirects, and take the only disk image).
 
 ## Workflow
 
@@ -48,14 +49,14 @@ APP_SIGN_IDENTITY="Developer ID Application: Fredy Mederos (R72WZKM2MR)" \
 7. Create the GitHub release.
 - Run:
 ```bash
-gh release create vX.Y.Z dist/KeepMyMacClean.dmg --repo fredy-mederos/keep_my_mac_clean \
-  --title "KeepMyMacClean vX.Y.Z" --notes-file <(scripts/release-notes.sh vX.Y.Z)
+gh release create vX.Y.Z dist/VibeClean.dmg --repo fredy-mederos/vibe_clean \
+  --title "Vibe Clean vX.Y.Z" --notes-file <(scripts/release-notes.sh vX.Y.Z)
 ```
 - Share the release URL at completion.
 
 8. Check that installed copies will see it.
-- `curl -s https://api.github.com/repos/fredy-mederos/keep_my_mac_clean/releases/latest | grep -E '"(tag_name|browser_download_url)"'`
-  shows `vX.Y.Z` and `KeepMyMacClean.dmg`.
+- `curl -s https://api.github.com/repos/fredy-mederos/vibe_clean/releases/latest | grep -E '"(tag_name|browser_download_url)"'`
+  shows `vX.Y.Z` and `VibeClean.dmg`.
 
 ## Guardrails
 

@@ -1,7 +1,7 @@
 import AppKit
 import Observation
 
-/// Checks GitHub for a newer KeepMyMacClean: a few seconds after launch (at most once an hour), once a day while it
+/// Checks GitHub for a newer Vibe Clean: a few seconds after launch (at most once an hour), once a day while it
 /// runs, and whenever you ask (Check for Updates at the bottom of the menu bar window, Settings → Updates). Each
 /// check is one request (`ReleaseFeed`); nothing is downloaded until you choose to. A newer version shows as Update
 /// Available at the bottom of the menu bar window and in Settings.
@@ -9,8 +9,9 @@ import Observation
 final class AppUpdater {
     static let shared = AppUpdater()
 
-    /// KeepMyMacClean's repository: its source, and the releases it checks.
-    static let repository = "fredy-mederos/keep_my_mac_clean"
+    /// Vibe Clean's repository: its source, and the releases it checks. (It was keep_my_mac_clean, which
+    /// GitHub redirects for copies from before the rename.)
+    static let repository = "fredy-mederos/vibe_clean"
     static var repositoryURL: URL { URL(string: "https://github.com/\(repository)")! }
 
     /// The newest release GitHub named at the last check, kept between launches; nil when there's none yet.
@@ -21,14 +22,14 @@ final class AppUpdater {
     /// Why the last check failed, until one succeeds.
     private(set) var failure: String?
 
-    /// The newest release, when it's newer than this copy of KeepMyMacClean.
+    /// The newest release, when it's newer than this copy.
     var available: Release? {
         guard let latest, VersionNumber.isValid(BuildInfo.version),
               VersionNumber.isVersion(BuildInfo.version, olderThan: latest.version) else { return nil }
         return latest
     }
 
-    @ObservationIgnored private var feed = ReleaseFeed(repository: repository, diskImageName: "KeepMyMacClean.dmg")
+    @ObservationIgnored private var feed = ReleaseFeed(repository: repository, diskImageName: "VibeClean.dmg")
     @ObservationIgnored private let defaults = UserDefaults.standard
     /// False while a debug build tries another repository, so that one's releases aren't kept.
     @ObservationIgnored private var keepsState = true

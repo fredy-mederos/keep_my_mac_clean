@@ -1,7 +1,7 @@
 import CleanerCore
 import Foundation
 
-// Read-only companion CLI: shows what KeepMyMacClean would find. It never deletes anything.
+// Read-only companion CLI: shows what Vibe Clean would find. It never deletes anything.
 
 let home = FileManager.default.homeDirectoryForCurrentUser
 let arguments = Array(CommandLine.arguments.dropFirst())

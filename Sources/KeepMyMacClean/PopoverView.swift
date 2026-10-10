@@ -112,7 +112,7 @@ private struct HeaderView: View {
                 NSApp.activate()
                 openSettings()
             }
-            IconButton(symbol: "power", help: "Quit KeepMyMacClean") {
+            IconButton(symbol: "power", help: "Quit \(BuildInfo.name)") {
                 NSApp.terminate(nil)
             }
         }
@@ -1067,7 +1067,7 @@ private struct UpdateLine: View {
             if let release = updater.available {
                 Button("Update Available: \(release.version)") { updater.download(release) }
                     .foregroundStyle(Palette.green)
-                    .help("Download KeepMyMacClean \(release.version) from GitHub")
+                    .help("Download \(BuildInfo.name) \(release.version) from GitHub")
             } else {
                 Button(label, action: check)
                     .foregroundStyle(Palette.secondaryText)

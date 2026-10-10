@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds KeepMyMacClean (release, for Apple silicon and Intel) with scripts/build-app.sh, signs it with a Developer ID
-# and packs it into dist/KeepMyMacClean.dmg, signed too. scripts/release.sh runs this, then scripts/notarize_dmg.sh.
+# Builds Vibe Clean (release, for Apple silicon and Intel) with scripts/build-app.sh, signs it with a Developer ID and
+# packs it into dist/VibeClean.dmg, signed too. scripts/release.sh runs this, then scripts/notarize_dmg.sh.
 #
 # Usage: APP_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" scripts/create_dmg.sh
 set -euo pipefail
@@ -8,10 +8,10 @@ cd "$(dirname "$0")/.."
 
 : "${APP_SIGN_IDENTITY:?Set APP_SIGN_IDENTITY, e.g. \"Developer ID Application: Your Name (TEAMID)\"}"
 
-name="KeepMyMacClean"
+name="Vibe Clean"
 app="dist/$name.app"
 staging="dist/dmg-staging"
-dmg="dist/$name.dmg"
+dmg="dist/VibeClean.dmg"
 
 # A release is built from a commit: build-app.sh stamps its hash (shown in Settings → About), with "+" for
 # uncommitted changes.

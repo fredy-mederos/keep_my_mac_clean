@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Builds KeepMyMacClean.app into dist/. Pass --install to copy it to ~/Applications and launch it.
+# Builds "Vibe Clean.app" into dist/. Pass --install to copy it to ~/Applications and launch it. The executable inside
+# keeps the code's name, KeepMyMacClean.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CONFIG="${CONFIG:-release}"
-APP="dist/KeepMyMacClean.app"
+APP="dist/Vibe Clean.app"
 # ARCHS="arm64 x86_64" builds a universal app (scripts/create_dmg.sh does, for releases); by default, for this Mac.
 BUILD_ARGS=(-c "$CONFIG")
 for arch in ${ARCHS:-}; do BUILD_ARGS+=(--arch "$arch"); done
@@ -36,9 +37,10 @@ if [[ "${1:-}" == "--install" ]]; then
   pkill -x KeepMyMacClean 2>/dev/null || true
   # Wait for it to quit (up to 5 s): reopening too soon fails with error -600.
   for _ in $(seq 25); do pgrep -x KeepMyMacClean >/dev/null || break; sleep 0.2; done
-  rm -rf "$HOME/Applications/KeepMyMacClean.app"
+  # A copy from before the rename (KeepMyMacClean.app) is replaced too.
+  rm -rf "$HOME/Applications/Vibe Clean.app" "$HOME/Applications/KeepMyMacClean.app"
   mkdir -p "$HOME/Applications"
   cp -R "$APP" "$HOME/Applications/"
-  open "$HOME/Applications/KeepMyMacClean.app"
+  open "$HOME/Applications/Vibe Clean.app"
   echo "Installed to ~/Applications and launched"
 fi

@@ -119,7 +119,7 @@ final class AppModel {
             if !lowSpaceAlertSent, settings.notifyOnLowSpace {
                 Notifier.post(
                     title: "Your Mac is running out of space",
-                    body: "\(ByteFormat.short(disk.available)) left. Open KeepMyMacClean to see what you can clean."
+                    body: "\(ByteFormat.short(disk.available)) left. Open Vibe Clean to see what you can clean."
                 )
             }
             lowSpaceAlertSent = true
@@ -135,7 +135,7 @@ final class AppModel {
         if let last = history.lastFillingAlert, Date().timeIntervalSince(last) < 3 * 86_400 { return }
         Notifier.post(
             title: "Your disk is filling up fast",
-            body: "At this pace it's full in about \(max(Int(days), 1)) days. Open KeepMyMacClean to see what's growing."
+            body: "At this pace it's full in about \(max(Int(days), 1)) days. Open Vibe Clean to see what's growing."
         )
         history.lastFillingAlert = Date()
         saveHistory()
@@ -231,7 +231,7 @@ final class AppModel {
     private func sendWeeklySummaryIfDue(_ facts: DigestFacts) {
         guard settings.weeklySummary, facts.isFullWeek, let text = digestText else { return }
         if let last = history.lastWeeklySummary, Date().timeIntervalSince(last) < 6.5 * 86_400 { return }
-        Notifier.post(title: text.headline, body: text.body.isEmpty ? "Open KeepMyMacClean to see what changed." : text.body)
+        Notifier.post(title: text.headline, body: text.body.isEmpty ? "Open Vibe Clean to see what changed." : text.body)
         history.lastWeeklySummary = Date()
         saveHistory()
     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Has Apple notarize dist/KeepMyMacClean.dmg and staples the ticket to it, so it opens without a warning.
+# Has Apple notarize dist/VibeClean.dmg and staples the ticket to it, so it opens without a warning.
 #
 # Credentials, either a keychain profile (stored once per Mac with
 # `xcrun notarytool store-credentials <profile> --apple-id <id> --team-id <team> --password <app-specific password>`):
@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-dmg="dist/KeepMyMacClean.dmg"
+dmg="dist/VibeClean.dmg"
 
 if [[ -n "${NOTARY_KEYCHAIN_PROFILE:-}" ]]; then
   auth=(--keychain-profile "$NOTARY_KEYCHAIN_PROFILE")

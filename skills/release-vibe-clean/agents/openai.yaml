@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Vibe Clean"
+  short_description: "Run the Vibe Clean release pipeline"
+  default_prompt: "Execute the Vibe Clean release workflow end-to-end: resolve the version, confirm it, build a signed and notarized DMG, tag it, and publish the GitHub release."

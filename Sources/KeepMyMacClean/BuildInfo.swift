@@ -1,11 +1,11 @@
 import Foundation
 
-/// What Settings → About shows about this copy of KeepMyMacClean. scripts/build-app.sh stamps the build number (the
+/// What Settings → About shows about this copy of Vibe Clean. scripts/build-app.sh stamps the build number (the
 /// number of commits), the commit and the build time into Info.plist; `swift run` builds have none of them.
 enum BuildInfo {
     private static var info: [String: Any] { Bundle.main.infoDictionary ?? [:] }
 
-    static let name = "KeepMyMacClean"
+    static let name = "Vibe Clean"
 
     /// `0.4.0`, or "–" when run with `swift run`.
     static var version: String { info["CFBundleShortVersionString"] as? String ?? "–" }
@@ -49,7 +49,7 @@ enum BuildInfo {
         return text
     }
 
-    /// For pasting into a bug report: `KeepMyMacClean 0.4.0 (9, fee5ec6), Release, built 2026-10-05 09:22`.
+    /// For pasting into a bug report: `Vibe Clean 1.2.0 (20, fee5ec6), Release, built 2026-10-11 09:22`.
     static var summary: String {
         let details = [build, commit.map { hasLocalChanges ? $0 + "+" : $0 }].compactMap { $0 }.joined(separator: ", ")
         let built = date.map { ", built " + $0.formatted(.iso8601.year().month().day().dateSeparator(.dash)) + " "

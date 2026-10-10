@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-// Settings' About and Updates sections. GitTree and Vibe Notepad show the same rows.
+// Settings' About and Updates sections. Vibe GitTree and Vibe Notepad show the same rows.
 
 /// Version, build (commit count · commit), configuration and build time, with Copy Version Info for bug reports.
 struct AboutSection: View {
@@ -65,7 +65,7 @@ struct UpdatesSection: View {
         } header: {
             Text("Updates")
         } footer: {
-            Text("KeepMyMacClean asks GitHub for the newest release when it starts and once a day while it runs. Check for Updates, at the bottom of the menu bar window, asks any time.")
+            Text("\(BuildInfo.name) asks GitHub for the newest release when it starts and once a day while it runs. Check for Updates, at the bottom of the menu bar window, asks any time.")
                 .font(.caption)
                 .foregroundStyle(Palette.secondaryText)
         }
@@ -73,9 +73,9 @@ struct UpdatesSection: View {
 
     private var title: String {
         if updater.isChecking { return "Checking for updates…" }
-        if let release = updater.available { return "KeepMyMacClean \(release.version) is available" }
+        if let release = updater.available { return "\(BuildInfo.name) \(release.version) is available" }
         if updater.failure != nil { return "Couldn't check for updates" }
-        if updater.lastChecked != nil { return "KeepMyMacClean is up to date" }
+        if updater.lastChecked != nil { return "\(BuildInfo.name) is up to date" }
         return "Not checked yet"
     }
 
@@ -89,6 +89,6 @@ struct UpdatesSection: View {
             let when = "Checked \(checked.formatted(.relative(presentation: .named)))"
             return updater.latest == nil ? "\(when) · no releases yet" : when
         }
-        return BuildInfo.isDebug ? "Debug builds check only when you ask." : "KeepMyMacClean checks when it starts."
+        return BuildInfo.isDebug ? "Debug builds check only when you ask." : "\(BuildInfo.name) checks when it starts."
     }
 }

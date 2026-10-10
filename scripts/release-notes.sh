@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 tag="${1:?Usage: scripts/release-notes.sh vX.Y.Z}"
-repo="fredy-mederos/keep_my_mac_clean"
+repo="fredy-mederos/vibe_clean"
 icon="https://raw.githubusercontent.com/$repo/main/Resources/AppIcon-1024.png"
 
 ref="$tag"
@@ -14,10 +14,10 @@ previous=$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$ref^" 2>/dev/null 
 
 cat <<NOTES
 <p align="center">
-  <img src="$icon" width="80" alt="KeepMyMacClean icon" />
+  <img src="$icon" width="80" alt="Vibe Clean icon" />
 </p>
 
-Download **KeepMyMacClean.dmg** below, open it and drag KeepMyMacClean into Applications. It lives in the menu bar and tells you when a new version is out (Check for Updates, at the bottom of its window).
+Download **VibeClean.dmg** below, open it and drag Vibe Clean into Applications. It lives in the menu bar and tells you when a new version is out (Check for Updates, at the bottom of its window).
 
 NOTES
 
@@ -28,5 +28,5 @@ if [[ -n "$previous" ]]; then
   echo
   echo "**Full changelog**: https://github.com/$repo/compare/$previous...$tag"
 else
-  echo "The first release: [the README](https://github.com/$repo#readme) describes what KeepMyMacClean does."
+  echo "The first release: [the README](https://github.com/$repo#readme) describes what Vibe Clean does."
 fi

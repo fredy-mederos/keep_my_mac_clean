@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prints KeepMyMacClean's version (CFBundleShortVersionString in Resources/Info.plist), or sets it:
+# Prints Vibe Clean's version (CFBundleShortVersionString in Resources/Info.plist), or sets it:
 # scripts/version.sh 0.5.0
 set -euo pipefail
 cd "$(dirname "$0")/.."
